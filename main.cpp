@@ -8,7 +8,7 @@ class coordinate
 {
     public:
 
-    //used to carry to coordinates of the points
+    //stores coordinates of the points
     int x,y;
 
     coordinate()
@@ -26,36 +26,7 @@ class coordinate
         y=b;
     }
 
-    //calculates euclidean distance 2 points
-    float euclidean_dist(coordinate *another)
-    {
-        return sqrt(pow((x-another->x),2)+pow((y-another->y),2));
-    }
 };
-
-//return points which are of maximum distance among each other
-int* pick_seed_point(coordinate **tot)
-{
-    int maxdis=-1;
-    int i,j,dis;
-    int *seed=new int[2];
-    int size=sizeof(tot)/sizeof(tot[0]);
-
-    for(i=0;i<size-1;i++)
-    {
-        for(j=i+1;j<size;j++)
-        {
-            dis=tot[i]->euclidean_dist(tot[j]);
-            if(dis > maxdis)
-            {
-                maxdis=dis;
-                seed[0]=i;
-                seed[1]=j;
-            }
-        }
-    }
-    return seed;
-}
 
 class mbb
 {
@@ -72,16 +43,18 @@ class mbb
         top[1]=toprighty;
     }
 
+    mbb(const mbb &ano)
+    {
+        bottom[0]=ano.bottom[0];
+        bottom[1]=ano.bottom[1];
+        top[0]=ano.top[0];
+        top[1]=ano.top[1];
+    }
+
     //calculates the area of the bounding box
     int area()
     {
         return (top[0]-bottom[0])*(top[1]-bottom[1]);
-    }
-
-    //returns the midpoint of this bounding box
-    coordinate* midpoint()
-    {
-        return coordinate((bottom[0]+top[0]/2),(bottom[1]+top[1]/2));
     }
 
     //calculate the overlapping area btwn 2 boxes
@@ -95,72 +68,8 @@ class mbb
         return area;
     }
 
-    //calculates the position of new point w.r.t bounding box
-    int new_point_loc(coordinate *co)
-    {
-        int x=co->x,y=co->y;
-        if((x>=bottom[0] and x<=top[0]) and (y>=bottom[1] and y<=top[1]))
-           return 0;
-        else if(x<bottom[0] and y<bottom[1])
-            return 1;
-        else if((x>=bottom[0] and x<=top[0]) and y<bottom[1])
-            return 2;
-        else if(x>top[0] and y<bottom[1])
-            return 3;
-        else if(x>top[0] and (y>=bottom[1] and y<=top[1]))
-            return 4;
-        else if(x>top[0] and y>top[1])
-            return 5;
-        else if((x>=bottom[0] and x<=top[0]) and y>top[1])
-            return 6;
-        else if(x<bottom[0] and y>top[1])
-            return 7;
-        else
-            return 8;
-    }
-
-    //changes the box coordinate w.r.t the new points
-    void handle_newpoint(coordinate *co)
-    {
-        int x=co->x,y=co->y;
-        int check=new_point_loc(co);
-        switch(check)
-        {
-            case 1:
-                bottom[0]=x;
-                bottom[1]=y;
-                break;
-            case 2:
-                bottom[1]=y;
-                break;
-            case 3:
-                bottom[1]=y;
-                top[0]=x;
-                break;
-            case 4:
-                top[0]=x;
-                break;
-            case 5:
-                top[0]=x;
-                top[1]=y;
-                break;
-            case 6:
-                top[1]=y;
-                break;
-            case 7:
-                bottom[0]=x;
-                top[1]=y;
-                break;
-            case 8:
-                bottom[0]=x;
-                break;
-            default:
-                break;
-        }
-    }
-
     //changes the box coordinate w.r.t the another box which is the child of this.
-    void handle_newbox(mbb *ano)
+    void handle_newobj(mbb *ano)
     {
         if(bottom[0]>ano->bottom[0])
             bottom[0]=ano->bottom[0];
@@ -172,55 +81,42 @@ class mbb
             top[1]=ano->top[1];
     }
 
-    //returns the area enlargement when we try to add the point in this box
-    int box_enlargement_point(coordinate *newco)
-    {
-        int x=newco->x,y=newco->y;
-        int check=new_point_loc(newco);
-        switch(check)
-        {
-            case 1:
-                return ((x-top[0])*(y-top[1]))-area();
-            case 2:
-                return ((bottom[0]-top[0])*(y-top[1]))-area();
-            case 3:
-                return ((bottom[0]-x)*(y-top[1]))-area();
-            case 4:
-                return ((bottom[0]-x)*(bottom[1]-top[1]))-area();
-            case 5:
-                return ((bottom[0]-x)*(bottom[1]-y))-area();
-            case 6:
-                return ((bottom[0]-top[0])*(bottom[1]-y))-area();
-            case 7:
-                return ((x-top[0])*(bottom[1]-y))-area();
-            case 8:
-                return ((x-top[0])*(bottom[1]-top[1]))-area();
-            default:
-                return 0;
-        }
-    }
-
     //returns the area enlargement when we try to add the box within this box
-    int box_enlargement_box(mbb *ano)
+    int area_enlargement(mbb *ano)
     {
         int totalarea=(max(top[0],ano->top[0])-min(bottom[0],ano->bottom[0]))*((max(top[1],ano->top[1])-min(bottom[1],ano->bottom[1])));
         return totalarea+overlapping_area(ano)-area()-ano->area();
     }
+
 };
 
-//returns boxes index which are having maximum dead space
-int *pick_seed_box(mbb **tot)
+//convert a point to box
+mbb *point_to_box(coordinate *co)
 {
+    mbb *newbox=new mbb(co->x,co->y,co->x,co->y);
+    return newbox;
+}
+
+//convert a box to coordinate
+coordinate* box_to_point(mbb *mo)
+{
+    coordinate *newco= new coordinate(mo->bottom[0],mo->bottom[1]);
+    return newco;
+}
+
+//returns boxes index which are having maximum dead space
+int *pick_seed(mbb **tot)
+{
+    //cout<<"inside pick seed";
     int maxdis=-1;
     int i,j,dis;
     int *seed=new int[2];
-    int size=sizeof(tot)/sizeof(tot[0]);
-
-    for(i=0;i<size-1;i++)
+    for(i=0;i<M;i++)
     {
-        for(j=i+1;j<size;j++)
+        for(j=i+1;j<M+1;j++)
         {
-            dis=tot[i]->box_enlargement_box(tot[j]);
+            dis=tot[i]->area_enlargement(tot[j]);
+            //cout<<"i is "<<i<<" j is "<<j<<" dis is "<<dis<<endl;
             if(dis > maxdis)
             {
                 maxdis=dis;
@@ -233,11 +129,10 @@ int *pick_seed_box(mbb **tot)
 }
 
 //returns the boxno and the index of the point in the tot array also take care of minno of nodes
-int* pick_next_point(coordinate **tot,mbb *box1,mbb *box2,bool *presence,int no1,int no2)
+int* pick_next(mbb **tot,mbb *box1,mbb *box2,bool *presence,int no1,int no2)
 {
     int i,a1,a2,d1,d2,lambda=M+1-no1-no2,flag=0;
     int *result=new int[2];
-    int size=sizeof(tot)/sizeof(tot[0]);
 
     if(no1==(ceil((float)M/2)-lambda))
     {
@@ -251,15 +146,15 @@ int* pick_next_point(coordinate **tot,mbb *box1,mbb *box2,bool *presence,int no1
         flag=1;
     }
 
-    for(i=0;i<size;i++)
+    for(i=0;i<M+1;i++)
     {
         if(presence[i]==false)
         {
             if(flag)
                 break;
 
-            d1=box1->box_enlargement_point(tot[i]);
-            d2=box2->box_enlargement_point(tot[i]);
+            d1=box1->area_enlargement(tot[i]);
+            d2=box2->area_enlargement(tot[i]);
             if(d1<d2)
                 result[0]=1;
             else if(d2<d1)
@@ -288,8 +183,6 @@ int* pick_next_point(coordinate **tot,mbb *box1,mbb *box2,bool *presence,int no1
     return result;
 }
 
-int* pick_next_box()
-
 class node
 {
     public:
@@ -314,103 +207,44 @@ class node
         no_childs=0;
     }
 
+    //insert a new point in the leaf node
     void insert_point(coordinate *co)
     {
         if(box==NULL)
             box=new mbb(co->x,co->y,co->x,co->y);
         points[no_points]=new coordinate(*co);
-        handle_newpoint(co);
+        box->handle_newobj(point_to_box(co));
         no_points++;
     }
 
-    coordinate** create_list(coordinate *next)
+    //insert a new child node in a non leaf node
+    void insert_child(node *c,bool type)
     {
-        coordinate **temp=new coordinate*[M+1];
-        for(int i=0;i<M;i++)
-            temp[i]=points[i];
-        temp[M]=next;
-        return temp;
-    }
-
-    void insert_child(node *c)
-    {
-        child[no_childs]=new node(false);
+        if(box==NULL)
+            box=new mbb(*c->box);
+        child[no_childs]=new node(type);
         child[no_childs]=c;
+        box->handle_newobj(c->box);
         no_childs++;
     }
 
-    void splitchild(int index,coordinate* co)
+    //converts the points to boxes and return it
+    mbb** create_list(coordinate *next)
     {
-        coordinate **all_points=child[0]->create_list(co);
-        delete child[0];
-        no_childs-=1;
-        child[0]=NULL;
-
-        bool presence[M+1];
-        for(int i=0;i<M+1;i++)
-            presence[i]=false;
-
-        int *seeds=pick_seed(all_points);
-
-        //cout<<endl<<all_points[seeds[0]]->x<<'\t'<<all_points[seeds[0]]->y<<endl;
-        //cout<<all_points[seeds[1]]->x<<'\t'<<all_points[seeds[1]]->y<<endl;
-
-        node *node1=new node(true),*node2=new node(true);
-        node1->insert_point(all_points[seeds[0]]);
-        node2->insert_point(all_points[seeds[1]]);
-
-        presence[seeds[0]]=true;
-        presence[seeds[1]]=true;
-
-        int lambda=M-1,no1=1,no2=1,*next;
-        while(lambda>0)
-        {
-            //cout<<no1<<no2<<endl;
-            if(no1==(ceil((float)M/2)-lambda))
-            {
-                for(int i=0;i<M+1;i++)
-                    if(presence[i]==false)
-                        node1->insert_point(all_points[i]);
-                break;
-            }
-            else if(no2==(ceil((float)M/2)-lambda))
-            {
-                for(int i=0;i<M+1;i++)
-                    if(presence[i]==false)
-                        node2->insert_point(all_points[i]);
-                break;
-            }
-            else
-            {
-                next=pick_next(all_points,node1->box,node2->box,presence,no1,no2);
-                //cout<<"next is "<<next[0]<<'\t'<<next[1]<<endl;
-                if(next[0]==1)
-                {
-                    node1->insert_point(all_points[next[1]]);
-                    no1++;
-                }
-                else
-                {
-                    node2->insert_point(all_points[next[1]]);
-                    no2++;
-                }
-                presence[next[1]]=true;
-                lambda--;
-            }
-        }
-        //cout<<node1->no_points<<node2->no_points<<endl;
-        insert_child(node1);
-        insert_child(node2);
-        box=new mbb(node1->box->bottom[0],node1->box->bottom[1],node1->box->top[0],node1->box->top[1]);
-        box->calculate_new_mbb(node2->box);
+        mbb **temp=new mbb*[M+1];
+        for(int i=0;i<M;i++)
+            temp[i]=point_to_box(points[i]);
+        temp[M]=point_to_box(next);
+        return temp;
     }
 
-    coordinate** create_mid_list(mbb *ano)
+    //returns a list of all mbb including next
+    mbb** create_list(mbb *next)
     {
-        coordinate **temp=new coordinate*[M+1];
+        mbb **temp=new mbb*[M+1];
         for(int i=0;i<M;i++)
-            temp[i]=child[i]->box->box_midpoint();
-        temp[M]=ano->box_midpoint();
+            temp[i]=child[i]->box;
+        temp[M]=next;
         return temp;
     }
 
@@ -419,77 +253,15 @@ class node
 class rtree
 {
     public:
-
     node *root;
 
-    node *insert_rec(node *root,coordinate *co)
-    {
-        //cout<<"inside rec function"<<endl;
-        if(root->isleaf==true)
-        {
-            // The current node is a leaf node
-            if(root->no_points<M)
-            {
-                cout<<"inside if"<<endl;
-                root->insert_point(co);
-                //cout<<"no of points present is "<<root->no_points<<endl;
-                //cout<<root->box->bottom[0]<<root->box->bottom[1];
-                //cout<<root->box->top[0]<<root->box->top[1];
-                return root;
-            }
-            else
-            {
-                cout<<"inside else";
-                node *n=new node(false);
-                n->insert_child(root);
-                n->splitchild(0,co);
-                //cout<<endl<<n->child[0]->box->area()<<endl;
-                //cout<<n->child[1]->box->area()<<endl;
-                //cout<<endl<<n->child[0]->box->bottom[0]<<n->child[0]->box->bottom[1];
-                //cout<<n->child[0]->box->top[0]<<n->child[0]->box->top[1]<<endl;
-
-                //cout<<endl<<n->child[1]->box->bottom[0]<<n->child[1]->box->bottom[1];
-                //cout<<n->child[1]->box->top[0]<<n->child[1]->box->top[1]<<endl;
-                return n;
-            }
-        }
-        else
-        {
-            cout<<"\nvery outer else\n";
-            //cout<<root->no_childs<<endl;
-            int i,minnode,minarea=999,temp;
-            for(i=0;i<root->no_childs;i++)
-            {
-                temp=root->child[i]->box->area_enlargement(co);
-                if(minarea>temp)
-                {
-                    minarea=temp;
-                    minnode=i;
-                }
-            }
-            root->child[minnode]=insert_rec(root->child[minnode],co);
-            //cout<<root->child[0]->no_points<<endl;
-            //cout<<root->child[1]->no_points<<endl;
-            root->box->calculate_new_mbb(root->child[minnode]->box);
-            //cout<<root->child[0]->box->area()<<root->child[1]->box->area();
-            return root;
-        }
-    }
-
-    public:
     rtree()
     {
         root=NULL;
     }
 
-    void insert(coordinate *p)
-    {
-        if(root==NULL)
-            root=new node(true);
-        insert_rec(root,p);
-    }
-
-    void insert_new(coordinate *co)
+    //insert a point in the tree
+    void insert(coordinate *co)
     {
         if(root==NULL)
         {
@@ -503,21 +275,21 @@ class rtree
             while(cursor->isleaf==false)
             {
                 parent=cursor;
-                parent->handle_newpoint(co);
+                parent->box->handle_newobj(point_to_box(co));
                 int i,minnode,minarea=999,temp;
 
                 for(i=0;i<cursor->no_childs;i++)
                 {
-                    temp=cursor->child[i]->box->area_enlargement(co);
+                    temp=cursor->child[i]->box->area_enlargement(point_to_box(co));
                     if(minarea>temp)
                     {
                         minarea=temp;
                         minnode=i;
                     }
                 }
-
                 cursor=cursor->child[minnode];
             }
+
             if(cursor->no_points<M)
             {
                 cursor->insert_point(co);
@@ -525,7 +297,7 @@ class rtree
             else
             {
                 node *newleaf=new node(true);
-                coordinate **all_points=cursor->create_list(co);
+                mbb **all_points=cursor->create_list(co);
                 cursor->no_points=0;
                 cursor->box=NULL;
 
@@ -534,56 +306,34 @@ class rtree
                     presence[i]=false;
 
                 int *seeds=pick_seed(all_points);
-                cursor->insert_point(all_points[seeds[0]]);
-                newleaf->insert_point(all_points[seeds[1]]);
+                cursor->insert_point(box_to_point(all_points[seeds[0]]));
+                newleaf->insert_point(box_to_point(all_points[seeds[1]]));
 
                 presence[seeds[0]]=true;
                 presence[seeds[1]]=true;
 
-                int lambda=M-1,no1=1,no2=1,*next;
-                while(lambda>0)
+                int no1=1,no2=1,*next;
+                while(no1+no2<M+1)
                 {
-                    //cout<<no1<<no2<<endl;
-                    if(no1==(ceil((float)M/2)-lambda))
+                    next=pick_next(all_points,cursor->box,newleaf->box,presence,no1,no2);
+                    if(next[0]==1)
                     {
-                        for(int i=0;i<M+1;i++)
-                            if(presence[i]==false)
-                                cursor->insert_point(all_points[i]);
-                        break;
-                    }
-                    else if(no2==(ceil((float)M/2)-lambda))
-                    {
-                        for(int i=0;i<M+1;i++)
-                            if(presence[i]==false)
-                                newleaf->insert_point(all_points[i]);
-                        break;
+                        cursor->insert_point(box_to_point(all_points[next[1]]));
+                        no1++;
                     }
                     else
                     {
-                        next=pick_next(all_points,cursor->box,newleaf->box,presence,no1,no2);
-                        //cout<<"next is "<<next[0]<<'\t'<<next[1]<<endl;
-                        if(next[0]==1)
-                        {
-                            cursor->insert_point(all_points[next[1]]);
-                            no1++;
-                        }
-                        else
-                        {
-                            newleaf->insert_point(all_points[next[1]]);
-                            no2++;
-                        }
-                        presence[next[1]]=true;
-                        lambda--;
+                        newleaf->insert_point(box_to_point(all_points[next[1]]));
+                        no2++;
                     }
+                    presence[next[1]]=true;
                 }
 
                 if(cursor==root)
                 {
                     node *newroot=new node(false);
-                    newroot->insert_child(cursor);
-                    newroot->insert_child(newleaf);
-                    newroot->box=new mbb(cursor->box->bottom[0],cursor->box->bottom[1],cursor->box->top[0],cursor->box->top[1]);
-                    newroot->box->calculate_new_mbb(newleaf->box);
+                    newroot->insert_child(cursor,true);
+                    newroot->insert_child(newleaf,true);
                     root=newroot;
                 }
                 else
@@ -595,7 +345,7 @@ class rtree
     }
 
     void insert_helper(node *cursor,node *child)
-    {
+    {/*
         if(cursor->no_childs<M)
         {
             cursor->insert_child(child);
@@ -604,7 +354,7 @@ class rtree
         {
             int i;
             node *newinternal=new node(false);
-            coordinate **all_midpoints=cursor->create_mid_list(child->box);
+            coordinate **all_boxes=cursor->create_mid_list(child->box);
             node *virtualchild[M+1];
 
             for(i=0;i<M;i++)
@@ -620,14 +370,66 @@ class rtree
             for(int i=0;i<M+1;i++)
                 presence[i]=false;
 
-            int *seeds=pick_seed(all_midpoints);
+            int *seeds=pick_seed(all_boxes);
             cursor->insert_child(virtualchild[seeds[0]]);
-            newleaf->insert_child(virtualchild[seeds[1]]);
+            newinternal->insert_child(virtualchild[seeds[1]]);
 
             presence[seeds[0]]=true;
             presence[seeds[1]]=true;
-        }
+
+            int no1=1,no2=1,*next;
+            while(no1+no2<M+1)
+            {
+                next=pick_next(all_points,cursor->box,newinternal->box,presence,no1,no2);
+                if(next[0]==1)
+                {
+                    cursor->insert_child(virtualchild[next[1]]);
+                    no1++;
+                }
+                else
+                {
+                    newinternal->insert_child(virtualchild[next[1]]);
+                    no2++;
+                }
+                presence[next[1]]=true;
+            }
+
+            if(cursor==root)
+            {
+                node *newroot=new node(false);
+                newroot->insert_child(cursor);
+                newroot->insert_child(newinternal);
+                newroot->box=new mbb(cursor->box->bottom[0],cursor->box->bottom[1],cursor->box->top[0],cursor->box->top[1]);
+                newroot->box->handle_newobj(newinternal->box);
+                root=newroot;
+            }
+            else
+            {
+                insert_helper(findparent(root,cursor),newinternal);
+            }
+        }*/
     }
+
+    //returns the parent of a node
+    node * findparent(node *cursor,node *child)
+    {
+        node *parent;
+        if(cursor->isleaf || cursor->child[0]->isleaf)
+            return NULL;
+        for(int i=0;i<cursor->no_childs;i++)
+        {
+            if(cursor->child[i]==child)
+                return cursor;
+            else
+            {
+                parent=findparent(cursor->child[i],child);
+                if(parent!=NULL)
+                    return parent;
+            }
+        }
+        return parent;
+    }
+
 };
 
 int main()
@@ -643,4 +445,3 @@ int main()
     cout<<tree.root->box->top[0]<<tree.root->box->top[1];
     return 1;
 }
-
