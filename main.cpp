@@ -345,34 +345,33 @@ class rtree
     }
 
     void insert_helper(node *cursor,node *child)
-    {/*
+    {
         if(cursor->no_childs<M)
         {
-            cursor->insert_child(child);
+            cursor->insert_child(child,child->isleaf);
         }
         else
         {
             int i;
             node *newinternal=new node(false);
-            coordinate **all_boxes=cursor->create_mid_list(child->box);
-            node *virtualchild[M+1];
+            mbb **all_boxes=cursor->create_list(child->box);
+            cursor->no_childs=0;
+            cursor->box=NULL;
 
+            node *virtualchild[M+1];
             for(i=0;i<M;i++)
             {
                 virtualchild[i]=cursor->child[i];
             }
             virtualchild[M]=child;
 
-            cursor->no_childs=0;
-            cursor->box=NULL;
-
             bool presence[M+1];
             for(int i=0;i<M+1;i++)
                 presence[i]=false;
 
             int *seeds=pick_seed(all_boxes);
-            cursor->insert_child(virtualchild[seeds[0]]);
-            newinternal->insert_child(virtualchild[seeds[1]]);
+            cursor->insert_child(virtualchild[seeds[0]],virtualchild[seeds[0]]->isleaf);
+            newinternal->insert_child(virtualchild[seeds[1]],virtualchild[seeds[1]]->isleaf);
 
             presence[seeds[0]]=true;
             presence[seeds[1]]=true;
@@ -380,15 +379,15 @@ class rtree
             int no1=1,no2=1,*next;
             while(no1+no2<M+1)
             {
-                next=pick_next(all_points,cursor->box,newinternal->box,presence,no1,no2);
+                next=pick_next(all_boxes,cursor->box,newinternal->box,presence,no1,no2);
                 if(next[0]==1)
                 {
-                    cursor->insert_child(virtualchild[next[1]]);
+                    cursor->insert_child(virtualchild[next[1]],virtualchild[next[1]]->isleaf);
                     no1++;
                 }
                 else
                 {
-                    newinternal->insert_child(virtualchild[next[1]]);
+                    newinternal->insert_child(virtualchild[next[1]],virtualchild[next[1]]->isleaf);
                     no2++;
                 }
                 presence[next[1]]=true;
@@ -397,8 +396,8 @@ class rtree
             if(cursor==root)
             {
                 node *newroot=new node(false);
-                newroot->insert_child(cursor);
-                newroot->insert_child(newinternal);
+                newroot->insert_child(cursor,false);
+                newroot->insert_child(newinternal,false);
                 newroot->box=new mbb(cursor->box->bottom[0],cursor->box->bottom[1],cursor->box->top[0],cursor->box->top[1]);
                 newroot->box->handle_newobj(newinternal->box);
                 root=newroot;
@@ -407,7 +406,7 @@ class rtree
             {
                 insert_helper(findparent(root,cursor),newinternal);
             }
-        }*/
+        }
     }
 
     //returns the parent of a node
@@ -435,13 +434,14 @@ class rtree
 int main()
 {
     rtree tree;
-    coordinate p[]={coordinate(10,10),coordinate(20,50),coordinate(30,30),coordinate(40,60),coordinate(50,60)};
-    tree.insert(&p[0]);
-    tree.insert(&p[1]);
-    tree.insert(&p[2]);
-    tree.insert(&p[3]);
-    tree.insert(&p[4]);
+    coordinate p[]={coordinate(10,10),coordinate(20,50),coordinate(30,30),coordinate(40,60),coordinate(50,60),coordinate(0,10),
+                    coordinate(10,20),coordinate(30,60),coordinate(5,5)};
+    for(int i=0;i<9;i++)
+        tree.insert(&p[i]);
     cout<<tree.root->box->bottom[0]<<tree.root->box->bottom[1];
-    cout<<tree.root->box->top[0]<<tree.root->box->top[1];
+    cout<<tree.root->box->top[0]<<tree.root->box->top[1]<<endl;
+    //cout<<tree.root->child[0]->child[0]->no_childs<<tree.root->child[0]->child[0]->no_points<<endl;
+    //cout<<tree.root->child[0]->child[0]->box->bottom[0]<<tree.root->child[0]->child[0]->box->bottom[1];
+    //cout<<tree.root->child[0]->child[0]->box->top[0]<<tree.root->child[0]->child[0]->box->top[1];
     return 1;
 }
