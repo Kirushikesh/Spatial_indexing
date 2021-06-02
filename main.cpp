@@ -8,6 +8,7 @@ class coordinate
 {
     public:
 
+    //used to carry to coordinates of the points
     int x,y;
 
     coordinate()
@@ -25,21 +26,24 @@ class coordinate
         y=b;
     }
 
+    //calculates euclidean distance 2 points
     float euclidean_dist(coordinate *another)
     {
         return sqrt(pow((x-another->x),2)+pow((y-another->y),2));
     }
 };
 
-int* pick_seed(coordinate **tot)
+//return points which are of maximum distance among each other
+int* pick_seed_point(coordinate **tot)
 {
-    int maxdis=0;
+    int maxdis=-1;
     int i,j,dis;
     int *seed=new int[2];
+    int size=sizeof(tot)/sizeof(tot[0]);
 
-    for(i=0;i<M;i++)
+    for(i=0;i<size-1;i++)
     {
-        for(j=i+1;j<M+1;j++)
+        for(j=i+1;j<size;j++)
         {
             dis=tot[i]->euclidean_dist(tot[j]);
             if(dis > maxdis)
@@ -68,6 +72,30 @@ class mbb
         top[1]=toprighty;
     }
 
+    //calculates the area of the bounding box
+    int area()
+    {
+        return (top[0]-bottom[0])*(top[1]-bottom[1]);
+    }
+
+    //returns the midpoint of this bounding box
+    coordinate* midpoint()
+    {
+        return coordinate((bottom[0]+top[0]/2),(bottom[1]+top[1]/2));
+    }
+
+    //calculate the overlapping area btwn 2 boxes
+    int overlapping_area(mbb* ano)
+    {
+        int x_dist=min(top[0],ano->top[0])-max(bottom[0],ano->bottom[0]);
+        int y_dist=min(top[1],ano->top[1])-max(bottom[1],ano->bottom[1]);
+        int area=0;
+        if(x_dist>0 && y_dist>0)
+            area=x_dist*y_dist;
+        return area;
+    }
+
+    //calculates the position of new point w.r.t bounding box
     int new_point_loc(coordinate *co)
     {
         int x=co->x,y=co->y;
@@ -91,12 +119,61 @@ class mbb
             return 8;
     }
 
-    int area()
+    //changes the box coordinate w.r.t the new points
+    void handle_newpoint(coordinate *co)
     {
-        return (top[0]-bottom[0])*(top[1]-bottom[1]);
+        int x=co->x,y=co->y;
+        int check=new_point_loc(co);
+        switch(check)
+        {
+            case 1:
+                bottom[0]=x;
+                bottom[1]=y;
+                break;
+            case 2:
+                bottom[1]=y;
+                break;
+            case 3:
+                bottom[1]=y;
+                top[0]=x;
+                break;
+            case 4:
+                top[0]=x;
+                break;
+            case 5:
+                top[0]=x;
+                top[1]=y;
+                break;
+            case 6:
+                top[1]=y;
+                break;
+            case 7:
+                bottom[0]=x;
+                top[1]=y;
+                break;
+            case 8:
+                bottom[0]=x;
+                break;
+            default:
+                break;
+        }
     }
 
-    int area_enlargement(coordinate *newco)
+    //changes the box coordinate w.r.t the another box which is the child of this.
+    void handle_newbox(mbb *ano)
+    {
+        if(bottom[0]>ano->bottom[0])
+            bottom[0]=ano->bottom[0];
+        if(bottom[1]>ano->bottom[1])
+            bottom[1]=ano->bottom[1];
+        if(top[0]<ano->top[0])
+            top[0]=ano->top[0];
+        if(top[1]<ano->top[1])
+            top[1]=ano->top[1];
+    }
+
+    //returns the area enlargement when we try to add the point in this box
+    int box_enlargement_point(coordinate *newco)
     {
         int x=newco->x,y=newco->y;
         int check=new_point_loc(newco);
@@ -123,38 +200,66 @@ class mbb
         }
     }
 
-    void calculate_new_mbb(mbb *ano)
+    //returns the area enlargement when we try to add the box within this box
+    int box_enlargement_box(mbb *ano)
     {
-        if(bottom[0]>ano->bottom[0])
-            bottom[0]=ano->bottom[0];
-        if(bottom[1]>ano->bottom[1])
-            bottom[1]=ano->bottom[1];
-        if(top[0]<ano->top[0])
-            top[0]=ano->top[0];
-        if(top[1]<ano->top[1])
-            top[1]=ano->top[1];
-        //cout<<bottom[0]<<bottom[1]<<top[0]<<top[1]<<endl;
-    }
-
-    coordinate* box_midpoint()
-    {
-        return coordinate((bottom[0]+top[0]/2),(bottom[1]+top[1]/2));
+        int totalarea=(max(top[0],ano->top[0])-min(bottom[0],ano->bottom[0]))*((max(top[1],ano->top[1])-min(bottom[1],ano->bottom[1])));
+        return totalarea+overlapping_area(ano)-area()-ano->area();
     }
 };
 
-int* pick_next(coordinate **tot,mbb *box1,mbb *box2,bool *presence,int no1,int no2)
+//returns boxes index which are having maximum dead space
+int *pick_seed_box(mbb **tot)
 {
-    int i,a1,a2,d1,d2;
-    int *result=new int[2];
+    int maxdis=-1;
+    int i,j,dis;
+    int *seed=new int[2];
+    int size=sizeof(tot)/sizeof(tot[0]);
 
-    for(i=0;i<M+1;i++)
+    for(i=0;i<size-1;i++)
+    {
+        for(j=i+1;j<size;j++)
+        {
+            dis=tot[i]->box_enlargement_box(tot[j]);
+            if(dis > maxdis)
+            {
+                maxdis=dis;
+                seed[0]=i;
+                seed[1]=j;
+            }
+        }
+    }
+    return seed;
+}
+
+//returns the boxno and the index of the point in the tot array also take care of minno of nodes
+int* pick_next_point(coordinate **tot,mbb *box1,mbb *box2,bool *presence,int no1,int no2)
+{
+    int i,a1,a2,d1,d2,lambda=M+1-no1-no2,flag=0;
+    int *result=new int[2];
+    int size=sizeof(tot)/sizeof(tot[0]);
+
+    if(no1==(ceil((float)M/2)-lambda))
+    {
+        result[0]=1;
+        flag=1;
+    }
+
+    else if(no2==(ceil((float)M/2)-lambda))
+    {
+        result[0]=2;
+        flag=1;
+    }
+
+    for(i=0;i<size;i++)
     {
         if(presence[i]==false)
         {
-            //cout<<"point "<<i<<"is observed now\n";
-            d1=box1->area_enlargement(tot[i]);
-            d2=box2->area_enlargement(tot[i]);
-            //cout<<"d1 and d2 is "<<d1<<" "<<d2<<endl;
+            if(flag)
+                break;
+
+            d1=box1->box_enlargement_point(tot[i]);
+            d2=box2->box_enlargement_point(tot[i]);
             if(d1<d2)
                 result[0]=1;
             else if(d2<d1)
@@ -163,7 +268,6 @@ int* pick_next(coordinate **tot,mbb *box1,mbb *box2,bool *presence,int no1,int n
             {
                 a1=box1->area();
                 a2=box2->area();
-                //cout<<"a1 and a2 is "<<a1<<" "<<a2<<endl;
                 if(a1<a2)
                     result[0]=1;
                 else if(a2<a1)
@@ -181,10 +285,10 @@ int* pick_next(coordinate **tot,mbb *box1,mbb *box2,bool *presence,int no1,int n
     }
 
     result[1]=i;
-    //cout<<"result is "<<result[0]<<'\t'<<result[1]<<endl;
-    //cout<<"going to exit the pick next function\n";
     return result;
 }
+
+int* pick_next_box()
 
 class node
 {
@@ -217,46 +321,6 @@ class node
         points[no_points]=new coordinate(*co);
         handle_newpoint(co);
         no_points++;
-    }
-
-    void handle_newpoint(coordinate *co)
-    {
-        int x=co->x,y=co->y;
-        int check=box->new_point_loc(co);
-        switch(check)
-        {
-            case 1:
-                box->bottom[0]=x;
-                box->bottom[1]=y;
-                break;
-            case 2:
-                box->bottom[1]=y;
-                break;
-            case 3:
-                box->bottom[1]=y;
-                box->top[0]=x;
-                break;
-            case 4:
-                box->top[0]=x;
-                break;
-            case 5:
-                box->top[0]=x;
-                box->top[1]=y;
-                break;
-            case 6:
-                box->top[1]=y;
-                break;
-            case 7:
-                box->bottom[0]=x;
-                box->top[1]=y;
-                break;
-            case 8:
-                box->bottom[0]=x;
-                break;
-            default:
-                // means the point is inside the bounding box
-                break;
-        }
     }
 
     coordinate** create_list(coordinate *next)
@@ -341,7 +405,7 @@ class node
         box->calculate_new_mbb(node2->box);
     }
 
-    coordinate** create_box_list(mbb *ano)
+    coordinate** create_mid_list(mbb *ano)
     {
         coordinate **temp=new coordinate*[M+1];
         for(int i=0;i<M;i++)
@@ -349,6 +413,7 @@ class node
         temp[M]=ano->box_midpoint();
         return temp;
     }
+
 };
 
 class rtree
@@ -534,12 +599,20 @@ class rtree
         if(cursor->no_childs<M)
         {
             cursor->insert_child(child);
-            cursor->box->calculate_new_mbb(child->box);
         }
         else
         {
+            int i;
             node *newinternal=new node(false);
-            coordinate **all_points=cursor->create_box_list(child->box);
+            coordinate **all_midpoints=cursor->create_mid_list(child->box);
+            node *virtualchild[M+1];
+
+            for(i=0;i<M;i++)
+            {
+                virtualchild[i]=cursor->child[i];
+            }
+            virtualchild[M]=child;
+
             cursor->no_childs=0;
             cursor->box=NULL;
 
@@ -547,9 +620,9 @@ class rtree
             for(int i=0;i<M+1;i++)
                 presence[i]=false;
 
-            int *seeds=pick_seed(all_points);
-            cursor->insert_point(all_points[seeds[0]]);
-            newleaf->insert_point(all_points[seeds[1]]);
+            int *seeds=pick_seed(all_midpoints);
+            cursor->insert_child(virtualchild[seeds[0]]);
+            newleaf->insert_child(virtualchild[seeds[1]]);
 
             presence[seeds[0]]=true;
             presence[seeds[1]]=true;
