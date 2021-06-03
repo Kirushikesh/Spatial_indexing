@@ -28,6 +28,18 @@ class coordinate
 
 };
 
+//checks whether 2 lines intersecting or not
+bool line_intersection(coordinate *x1,coordinate *y1,coordinate *x2,coordinate *y2)
+{
+    int a1=y1->y-x1->y,b1=x1->x-y1->x;
+    int a2=y2->y-x2->y,b2=x2->x-y2->x;
+    int c1=a1*x1->x+b1*x1->y,c2=a2*x2->x+b2*x2->y;
+    double det = a1 * b2 - a2 * b1;
+    if (det == 0)
+        return false;
+    return truel
+}
+
 class mbb
 {
     public:
@@ -88,6 +100,10 @@ class mbb
         return totalarea+overlapping_area(ano)-area()-ano->area();
     }
 
+    bool box_line_intersection(coordinate *x1,coordinate *y1)
+    {
+        //TO DO
+    }
 };
 
 //convert a point to box
@@ -248,6 +264,33 @@ class node
         return temp;
     }
 
+    void range_search_helper(mbb *query)
+    {
+        cout<<box->bottom[0]<<box->bottom[1]<<box->top[0]<<box->top[1]<<endl;
+        if(isleaf==false)
+        {
+            for(int i=0;i<no_childs;i++)
+            {
+                cout<<"child "<<i<<" overlapping value is "<<child[i]->box->overlapping_area(query)<<endl;
+                if(child[i]->box->overlapping_area(query)>0)
+                    child[i]->range_search_helper(query);
+            }
+        }
+        else
+        {
+            for(int i=0;i<no_points;i++)
+            {
+                cout<<points[i]->x<<points[i]->y<<endl;
+                if(points[i]->x >=query->bottom[0] and points[i]->x <=query->top[0])
+                {
+                    if(points[i]->y >=query->bottom[1] and points[i]->y <=query->top[1])
+                    {
+                        cout<<"( "<<points[i]->x<<" , "<<points[i]->y<<" ) ,";
+                    }
+                }
+            }
+        }
+    }
 };
 
 class rtree
@@ -429,6 +472,17 @@ class rtree
         return parent;
     }
 
+    void range_search(mbb *m)
+    {
+        if(root->isleaf==true or (root->box->overlapping_area(m)>0) or (root->box->area()==0 and ))
+        {
+            root->range_search_helper(m);
+        }
+        else
+        {
+            cout<<"No points occur"<<endl;
+        }
+    }
 };
 
 int main()
@@ -438,8 +492,11 @@ int main()
                     coordinate(10,20),coordinate(30,60),coordinate(5,5)};
     for(int i=0;i<9;i++)
         tree.insert(&p[i]);
-    cout<<tree.root->box->bottom[0]<<tree.root->box->bottom[1];
-    cout<<tree.root->box->top[0]<<tree.root->box->top[1]<<endl;
+    //cout<<tree.root->box->bottom[0]<<tree.root->box->bottom[1];
+    //cout<<tree.root->box->top[0]<<tree.root->box->top[1]<<endl;
+
+    mbb *m=new mbb(40,40,60,60);
+    tree.range_search(m);
     //cout<<tree.root->child[0]->child[0]->no_childs<<tree.root->child[0]->child[0]->no_points<<endl;
     //cout<<tree.root->child[0]->child[0]->box->bottom[0]<<tree.root->child[0]->child[0]->box->bottom[1];
     //cout<<tree.root->child[0]->child[0]->box->top[0]<<tree.root->child[0]->child[0]->box->top[1];
