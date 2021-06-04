@@ -28,25 +28,6 @@ class coordinate
 
 };
 
-//checks whether 2 lines intersecting or not
-bool line_intersection(coordinate *l1p1,coordinate *l1p2,coordinate *l2p1,coordinate *l2p2)
-{
-    int a1=l1p2->y-l1p1->y , b1=l1p1->x-l1p2->x;
-    int a2=l2p2->y-l2p1->y,b2=l2p1->x-l2p2->x;
-    int c1=a1*l1p1->x+b1*l1p1->y,c2=a2*l2p1->x+b2*l2p1->y;
-    double det = a1 * b2 - a2 * b1;
-    if (det == 0)
-        return false;
-    else
-    {
-        double x = (b2 * c1 - b1 * c2) / det;
-        double y = (a1 * c2 - a2 * c1) / det;
-        if(x>=l1p1->x and x<=l1p2->x and y>=l1p1->y and y<=l1p2->y)
-            return true;
-    }
-    return false;
-}
-
 class mbb
 {
     public:
@@ -107,22 +88,36 @@ class mbb
         return totalarea+overlapping_area(ano)-area()-ano->area();
     }
 
-    bool box_line_intersection(coordinate *p1,coordinate *p2)
+    //determine whether this rectangle touch with other rectangle
+    bool touch_box(mbb *box1)
     {
-        coordinate *bl=new coordinate(bottom[0],bottom[1]);
-        coordinate *br=new coordinate(top[0],bottom[1]);
-        coordinate *tl=new coordinate(bottom[0],top[1]);
-        coordinate *tr=new coordinate(top[0],top[1]);
-        if(line_intersection(bl,br,p1,p2))
-            return true;
-        else if(line_intersection(br,tr,p1,p2))
-            return true;
-        else if(line_intersection(tr,tl,p1,p2))
-            return true;
-        else if(line_intersection(tr,bl,p1,p2))
-            return true;
+        //checks for touches from the top
+        if(bottom[1]==box1->top[1])
+        {
+            if(!(top[0]<box1->bottom[0] or bottom[0]>box1->top[0]))
+                return true;
+        }
+        //checks for touches from the left
+        if(box1->bottom[0]==top[0])
+        {
+            if(!(top[1]<box1->bottom[1] or bottom[1]>box1->top[1]))
+                return true;
+        }
+        //checks for touches from the right
+        if(box1->top[0]==bottom[0])
+        {
+            if(!(top[1]<box1->bottom[1] or bottom[1]>box1->top[1]))
+                return true;
+        }
+        //checks for touches from the bottom
+        if(top[1]==box1->bottom[1])
+        {
+            if(!(top[0]<box1->bottom[0] or bottom[0]>box1->top[0]))
+                return true;
+        }
         return false;
     }
+
 };
 
 //convert a point to box
@@ -289,10 +284,7 @@ class node
         {
             for(int i=0;i<no_childs;i++)
             {
-                if(child[i]->box->overlapping_area(query)>0 or
-                            (child[i]->box->area()==0 and
-                                query->box_line_intersection(&coordinate(child[i]->box->bottom[0],child[i]->box->bottom[1]),
-                                                                 &coordinate(child[i]->box->top[0],child[i]->box->top[1]))))
+                if(child[i]->box->overlapping_area(query)>0 or query->touch_box(child[i]->box))
                     child[i]->range_search_helper(query);
             }
         }
@@ -493,8 +485,7 @@ class rtree
 
     void range_search(mbb *m)
     {
-        coordinate b(root->box->bottom[0],root->box->bottom[1]),t(root->box->top[0],root->box->top[1]);
-        if(root->box->overlapping_area(m)>0 or (root->box->area()==0 and (root->no_points==1 or m->box_line_intersection(&b,&t))))
+        if(root->box->overlapping_area(m)>0 or root->no_points==1 or m->touch_box(root->box))
         {
             root->range_search_helper(m);
         }
@@ -515,7 +506,7 @@ int main()
     //cout<<tree.root->box->bottom[0]<<tree.root->box->bottom[1];
     //cout<<tree.root->box->top[0]<<tree.root->box->top[1]<<endl;
 
-    mbb *m=new mbb(0,10,10,20);
+    mbb *m=new mbb(40,40,60,60);
     tree.range_search(m);
     //cout<<tree.root->child[0]->child[0]->no_childs<<tree.root->child[0]->child[0]->no_points<<endl;
     //cout<<tree.root->child[0]->child[0]->box->bottom[0]<<tree.root->child[0]->child[0]->box->bottom[1];
