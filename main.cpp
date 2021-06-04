@@ -29,15 +29,22 @@ class coordinate
 };
 
 //checks whether 2 lines intersecting or not
-bool line_intersection(coordinate *x1,coordinate *y1,coordinate *x2,coordinate *y2)
+bool line_intersection(coordinate *l1p1,coordinate *l1p2,coordinate *l2p1,coordinate *l2p2)
 {
-    int a1=y1->y-x1->y,b1=x1->x-y1->x;
-    int a2=y2->y-x2->y,b2=x2->x-y2->x;
-    int c1=a1*x1->x+b1*x1->y,c2=a2*x2->x+b2*x2->y;
+    int a1=l1p2->y-l1p1->y , b1=l1p1->x-l1p2->x;
+    int a2=l2p2->y-l2p1->y,b2=l2p1->x-l2p2->x;
+    int c1=a1*l1p1->x+b1*l1p1->y,c2=a2*l2p1->x+b2*l2p1->y;
     double det = a1 * b2 - a2 * b1;
     if (det == 0)
         return false;
-    return truel
+    else
+    {
+        double x = (b2 * c1 - b1 * c2) / det;
+        double y = (a1 * c2 - a2 * c1) / det;
+        if(x>=l1p1->x and x<=l1p2->x and y>=l1p1->y and y<=l1p2->y)
+            return true;
+    }
+    return false;
 }
 
 class mbb
@@ -100,9 +107,21 @@ class mbb
         return totalarea+overlapping_area(ano)-area()-ano->area();
     }
 
-    bool box_line_intersection(coordinate *x1,coordinate *y1)
+    bool box_line_intersection(coordinate *p1,coordinate *p2)
     {
-        //TO DO
+        coordinate *bl=new coordinate(bottom[0],bottom[1]);
+        coordinate *br=new coordinate(top[0],bottom[1]);
+        coordinate *tl=new coordinate(bottom[0],top[1]);
+        coordinate *tr=new coordinate(top[0],top[1]);
+        if(line_intersection(bl,br,p1,p2))
+            return true;
+        else if(line_intersection(br,tr,p1,p2))
+            return true;
+        else if(line_intersection(tr,tl,p1,p2))
+            return true;
+        else if(line_intersection(tr,bl,p1,p2))
+            return true;
+        return false;
     }
 };
 
@@ -266,13 +285,14 @@ class node
 
     void range_search_helper(mbb *query)
     {
-        cout<<box->bottom[0]<<box->bottom[1]<<box->top[0]<<box->top[1]<<endl;
         if(isleaf==false)
         {
             for(int i=0;i<no_childs;i++)
             {
-                cout<<"child "<<i<<" overlapping value is "<<child[i]->box->overlapping_area(query)<<endl;
-                if(child[i]->box->overlapping_area(query)>0)
+                if(child[i]->box->overlapping_area(query)>0 or
+                            (child[i]->box->area()==0 and
+                                query->box_line_intersection(&coordinate(child[i]->box->bottom[0],child[i]->box->bottom[1]),
+                                                                 &coordinate(child[i]->box->top[0],child[i]->box->top[1]))))
                     child[i]->range_search_helper(query);
             }
         }
@@ -280,7 +300,6 @@ class node
         {
             for(int i=0;i<no_points;i++)
             {
-                cout<<points[i]->x<<points[i]->y<<endl;
                 if(points[i]->x >=query->bottom[0] and points[i]->x <=query->top[0])
                 {
                     if(points[i]->y >=query->bottom[1] and points[i]->y <=query->top[1])
@@ -474,7 +493,8 @@ class rtree
 
     void range_search(mbb *m)
     {
-        if(root->isleaf==true or (root->box->overlapping_area(m)>0) or (root->box->area()==0 and ))
+        coordinate b(root->box->bottom[0],root->box->bottom[1]),t(root->box->top[0],root->box->top[1]);
+        if(root->box->overlapping_area(m)>0 or (root->box->area()==0 and (root->no_points==1 or m->box_line_intersection(&b,&t))))
         {
             root->range_search_helper(m);
         }
@@ -495,10 +515,11 @@ int main()
     //cout<<tree.root->box->bottom[0]<<tree.root->box->bottom[1];
     //cout<<tree.root->box->top[0]<<tree.root->box->top[1]<<endl;
 
-    mbb *m=new mbb(40,40,60,60);
+    mbb *m=new mbb(0,10,10,20);
     tree.range_search(m);
     //cout<<tree.root->child[0]->child[0]->no_childs<<tree.root->child[0]->child[0]->no_points<<endl;
     //cout<<tree.root->child[0]->child[0]->box->bottom[0]<<tree.root->child[0]->child[0]->box->bottom[1];
     //cout<<tree.root->child[0]->child[0]->box->top[0]<<tree.root->child[0]->child[0]->box->top[1];
     return 1;
 }
+//Convert the points in the mbb as a coordinates;
