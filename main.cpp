@@ -26,6 +26,7 @@ class coordinate
         y=b;
     }
 
+    //computes the squared euclidean distance between this and another point
     int squ_euclidean(coordinate *ano)
     {
         return pow(ano->x-x,2)+pow(ano->y-y,2);
@@ -36,7 +37,6 @@ class coordinate
 //adds a new coordinate into the results list based on insertion sort method
 void add_knn(coordinate *newpnt,int distance,coordinate** results,int dis[],int no,int k)
 {
-    cout<<"new point coordinates is "<<newpnt->x<<newpnt->y<<endl<<" distance from q is "<<distance<<endl;
     if(no==k)
     {
         int i=no-2;
@@ -46,7 +46,6 @@ void add_knn(coordinate *newpnt,int distance,coordinate** results,int dis[],int 
             results[i+1]=results[i];
             i--;
         }
-        cout<<"new point inserted in the index "<<i+1<<endl;
         results[i+1]=newpnt;
         dis[i+1]=distance;
     }
@@ -59,7 +58,6 @@ void add_knn(coordinate *newpnt,int distance,coordinate** results,int dis[],int 
             results[i+1]=results[i];
             i--;
         }
-        cout<<"new point inserted in the index "<<i+1<<endl;
         results[i+1]=newpnt;
         dis[i+1]=distance;
     }
@@ -155,6 +153,7 @@ class mbb
         return false;
     }
 
+    //calculates the mindist btwn this box and a point
     int mindist(coordinate *qi)
     {
         int min=0;
@@ -328,6 +327,7 @@ class node
         return temp;
     }
 
+    //searchs the point present within a query box coordinates
     void range_search_helper(mbb *query)
     {
         if(isleaf==false)
@@ -353,65 +353,70 @@ class node
         }
     }
 
-    //sorts the node based on mindis
-    void sort_branchlist(node **branchlist,int dis[],int n)
-    {
-        int i, key, j;
-        node *temp;
-        for (i = 1; i < n; i++)
-        {
-            temp=branchlist[i];
-            key = dis[i];
-            j = i - 1;
-
-            while (j >= 0 && dis[j] > key)
-            {
-                dis[j + 1] = dis[j];
-                branchlist[j+1]=branchlist[j];
-                j = j - 1;
-            }
-            dis[j + 1] = key;
-            branchlist[j+1]=temp;
-        }
-    }
-
-    int knn_helper(coordinate **results,int dis[],coordinate *query,int cur,int k)
-    {
-        int i=0,d;
-        if(isleaf==true)
-        {
-            for(i=0;i<no_points;i++)
-            {
-                d=query->squ_euclidean(points[i]);
-                if(d<dis[cur-1])
-                    add_knn(points[i],d,results,dis,cur,k);
-                if(cur<k)
-                    cur++;
-            }
-        }
-        else
-        {
-            node **branchlist=new node*[no_childs];
-            int mindis[no_childs];
-            for(i=0;i<no_childs;i++)
-            {
-                branchlist[i]=child[i];
-                mindis[i]=child[i]->box->mindist(query);
-            }
-            sort_branchlist(branchlist,mindis,no_childs);
-
-            for(i=0;i<no_childs;i++)
-            {
-                if(mindis[i]<=dis[cur-1])
-                {
-                    cur=branchlist[i]->knn_helper(results,dis,query,cur,k);
-                }
-            }
-        }
-        return cur;
-    }
+    //finds the knn based on the query point (declared outside)
+    int knn_helper(coordinate **results,int dis[],coordinate *query,int cur,int k);
 
 };
+
+//sorts the node based on mindis uses insertion sort
+void sort_branchlist(node **branchlist,int dis[],int n)
+{
+    int i=0, key, j;
+    node *temp;
+    for (i = 1; i < n; i++)
+    {
+        temp=branchlist[i];
+        key = dis[i];
+        j = i - 1;
+
+        while (j >= 0 && dis[j] > key)
+        {
+            dis[j + 1] = dis[j];
+            branchlist[j+1]=branchlist[j];
+            j = j - 1;
+        }
+        dis[j + 1] = key;
+        branchlist[j+1]=temp;
+    }
+}
+
+
+//finds the knn based on the query point
+int node::knn_helper(coordinate **results,int dis[],coordinate *query,int cur,int k)
+{
+    int i=0,d;
+    if(isleaf==true)
+    {
+        for(i=0;i<no_points;i++)
+        {
+            d=query->squ_euclidean(points[i]);
+            if(d<=dis[cur-1])
+                add_knn(points[i],d,results,dis,cur,k);
+                if(cur<k)
+                    cur++;
+        }
+    }
+    else
+    {
+        node **branchlist=new node*[no_childs];
+        int mindis[no_childs];
+
+        for(i=0;i<no_childs;i++)
+        {
+            branchlist[i]=child[i];
+            mindis[i]=child[i]->box->mindist(query);
+        }
+        sort_branchlist(branchlist,mindis,no_childs);
+        for(i=0;i<no_childs;i++)
+        {
+            if(mindis[i]<=dis[cur-1] or cur==0)
+            {
+                cur=branchlist[i]->knn_helper(results,dis,query,cur,k);
+            }
+        }
+    }
+    return cur;
+}
 
 class rtree
 {
@@ -507,6 +512,7 @@ class rtree
         }
     }
 
+    //helper of insert function inserts a particular node in another node
     void insert_helper(node *cursor,node *child)
     {
         if(cursor->no_childs<M)
@@ -592,6 +598,7 @@ class rtree
         return parent;
     }
 
+    //finds all the points inside a box m
     void range_search(mbb *m)
     {
         if(root->box->overlapping_area(m)>0 or root->no_points==1 or m->touch_box(root->box))
@@ -604,6 +611,7 @@ class rtree
         }
     }
 
+    //finds knn wrt the k and query point
     void knn(int k,coordinate *query)
     {
         coordinate **results=new coordinate*[k];
@@ -611,13 +619,13 @@ class rtree
         for(int i=0;i<k;i++)
         {
             results[i]=NULL;
-            dis[i]=9999;
+            dis[i]=99999;
         }
+
         no=root->knn_helper(results,dis,query,no,k);
         for(int i=0;i<no;i++)
         {
-            cout<<results[i]->x<<results[i]->y<<endl;
-            cout<<dis[i]<<endl;
+            cout<<"Point is ("<<results[i]->x<<" , "<<results[i]->y<<" ) and distance is "<<dis[i]<<endl;
         }
     }
 };
@@ -629,11 +637,11 @@ int main()
                     coordinate(10,20),coordinate(30,60),coordinate(5,5)};
     for(int i=0;i<9;i++)
         tree.insert(&p[i]);
-    //cout<<tree.root->box->bottom[0]<<tree.root->box->bottom[1];
-    //cout<<tree.root->box->top[0]<<tree.root->box->top[1]<<endl;
+    cout<<tree.root->box->bottom[0]<<tree.root->box->bottom[1];
+    cout<<tree.root->box->top[0]<<tree.root->box->top[1]<<endl;
 
     mbb *m=new mbb(40,40,60,60);
-    tree.knn(3,&coordinate(7,7));
+    tree.knn(3,&coordinate(10,10));
     //cout<<tree.root->child[0]->child[0]->no_childs<<tree.root->child[0]->child[0]->no_points<<endl;
     //cout<<tree.root->child[0]->child[0]->box->bottom[0]<<tree.root->child[0]->child[0]->box->bottom[1];
     //cout<<tree.root->child[0]->child[0]->box->top[0]<<tree.root->child[0]->child[0]->box->top[1];
