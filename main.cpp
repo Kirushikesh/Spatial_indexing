@@ -67,36 +67,38 @@ class mbb
 {
     public:
 
-    int bottom[2];
-    int top[2];
+    coordinate *bottom;
+    coordinate *top;
 
     mbb(int bottomleftx,int bottomlefty,int toprightx,int toprighty)
     {
-        bottom[0]=bottomleftx;
-        bottom[1]=bottomlefty;
-        top[0]=toprightx;
-        top[1]=toprighty;
+        bottom=new coordinate(bottomleftx,bottomlefty);
+        top=new coordinate(toprightx,toprighty);
+    }
+
+    mbb(coordinate *b,coordinate *t)
+    {
+        bottom=new coordinate(*b);
+        top=new coordinate(*t);
     }
 
     mbb(const mbb &ano)
     {
-        bottom[0]=ano.bottom[0];
-        bottom[1]=ano.bottom[1];
-        top[0]=ano.top[0];
-        top[1]=ano.top[1];
+        bottom=new coordinate(*ano.bottom);
+        top=new coordinate(*ano.top);
     }
 
     //calculates the area of the bounding box
     int area()
     {
-        return (top[0]-bottom[0])*(top[1]-bottom[1]);
+        return (top->x-bottom->x)*(top->y-bottom->y);
     }
 
     //calculate the overlapping area btwn 2 boxes
     int overlapping_area(mbb* ano)
     {
-        int x_dist=min(top[0],ano->top[0])-max(bottom[0],ano->bottom[0]);
-        int y_dist=min(top[1],ano->top[1])-max(bottom[1],ano->bottom[1]);
+        int x_dist=min(top->x,ano->top->x)-max(bottom->x,ano->bottom->x);
+        int y_dist=min(top->y,ano->top->y)-max(bottom->y,ano->bottom->y);
         int area=0;
         if(x_dist>0 && y_dist>0)
             area=x_dist*y_dist;
@@ -106,20 +108,20 @@ class mbb
     //changes the box coordinate w.r.t the another box which is the child of this.
     void handle_newobj(mbb *ano)
     {
-        if(bottom[0]>ano->bottom[0])
-            bottom[0]=ano->bottom[0];
-        if(bottom[1]>ano->bottom[1])
-            bottom[1]=ano->bottom[1];
-        if(top[0]<ano->top[0])
-            top[0]=ano->top[0];
-        if(top[1]<ano->top[1])
-            top[1]=ano->top[1];
+        if(bottom->x>ano->bottom->x)
+            bottom->x=ano->bottom->x;
+        if(bottom->y>ano->bottom->y)
+            bottom->y=ano->bottom->y;
+        if(top->x<ano->top->x)
+            top->x=ano->top->x;
+        if(top->y<ano->top->y)
+            top->y=ano->top->y;
     }
 
     //returns the area enlargement when we try to add the box within this box
     int area_enlargement(mbb *ano)
     {
-        int totalarea=(max(top[0],ano->top[0])-min(bottom[0],ano->bottom[0]))*((max(top[1],ano->top[1])-min(bottom[1],ano->bottom[1])));
+        int totalarea=(max(top->x,ano->top->x)-min(bottom->x,ano->bottom->x))*((max(top->y,ano->top->y)-min(bottom->y,ano->bottom->y)));
         return totalarea+overlapping_area(ano)-area()-ano->area();
     }
 
@@ -127,27 +129,27 @@ class mbb
     bool touch_box(mbb *box1)
     {
         //checks for touches from the top
-        if(bottom[1]==box1->top[1])
+        if(bottom->y==box1->top->y)
         {
-            if(!(top[0]<box1->bottom[0] or bottom[0]>box1->top[0]))
+            if(!(top->x<box1->bottom->x or bottom->x>box1->top->x))
                 return true;
         }
         //checks for touches from the left
-        if(box1->bottom[0]==top[0])
+        if(box1->bottom->x==top->x)
         {
-            if(!(top[1]<box1->bottom[1] or bottom[1]>box1->top[1]))
+            if(!(top->y<box1->bottom->y or bottom->y>box1->top->y))
                 return true;
         }
         //checks for touches from the right
-        if(box1->top[0]==bottom[0])
+        if(box1->top->x==bottom->x)
         {
-            if(!(top[1]<box1->bottom[1] or bottom[1]>box1->top[1]))
+            if(!(top->y<box1->bottom->y or bottom->y>box1->top->y))
                 return true;
         }
         //checks for touches from the bottom
-        if(top[1]==box1->bottom[1])
+        if(top->y==box1->bottom->y)
         {
-            if(!(top[0]<box1->bottom[0] or bottom[0]>box1->top[0]))
+            if(!(top->x<box1->bottom->x or bottom->x>box1->top->x))
                 return true;
         }
         return false;
@@ -157,14 +159,14 @@ class mbb
     int mindist(coordinate *qi)
     {
         int min=0;
-        if(qi->x<bottom[0])
-            min+=pow(qi->x-bottom[0],2);
-        else if(qi->x>top[0])
-            min+=pow(qi->x-top[0],2);
-        if(qi->y<bottom[1])
-            min+=pow(qi->y-bottom[1],2);
-        else if(qi->y>top[1])
-            min+=pow(qi->y-top[1],2);
+        if(qi->x<bottom->x)
+            min+=pow(qi->x-bottom->x,2);
+        else if(qi->x>top->x)
+            min+=pow(qi->x-top->x,2);
+        if(qi->y<bottom->y)
+            min+=pow(qi->y-bottom->y,2);
+        else if(qi->y>top->y)
+            min+=pow(qi->y-top->y,2);
         return min;
     }
 };
@@ -172,21 +174,20 @@ class mbb
 //convert a point to box
 mbb *point_to_box(coordinate *co)
 {
-    mbb *newbox=new mbb(co->x,co->y,co->x,co->y);
+    mbb *newbox=new mbb(co,co);
     return newbox;
 }
 
 //convert a box to coordinate
 coordinate* box_to_point(mbb *mo)
 {
-    coordinate *newco= new coordinate(mo->bottom[0],mo->bottom[1]);
+    coordinate *newco= new coordinate(mo->bottom->x,mo->bottom->y);
     return newco;
 }
 
 //returns boxes index which are having maximum dead space
 int *pick_seed(mbb **tot)
 {
-    //cout<<"inside pick seed";
     int maxdis=-1;
     int i,j,dis;
     int *seed=new int[2];
@@ -195,7 +196,6 @@ int *pick_seed(mbb **tot)
         for(j=i+1;j<M+1;j++)
         {
             dis=tot[i]->area_enlargement(tot[j]);
-            //cout<<"i is "<<i<<" j is "<<j<<" dis is "<<dis<<endl;
             if(dis > maxdis)
             {
                 maxdis=dis;
@@ -290,7 +290,7 @@ class node
     void insert_point(coordinate *co)
     {
         if(box==NULL)
-            box=new mbb(co->x,co->y,co->x,co->y);
+            box=new mbb(co,co);
         points[no_points]=new coordinate(*co);
         box->handle_newobj(point_to_box(co));
         no_points++;
@@ -342,9 +342,9 @@ class node
         {
             for(int i=0;i<no_points;i++)
             {
-                if(points[i]->x >=query->bottom[0] and points[i]->x <=query->top[0])
+                if(points[i]->x >=query->bottom->x and points[i]->x <=query->top->x)
                 {
-                    if(points[i]->y >=query->bottom[1] and points[i]->y <=query->top[1])
+                    if(points[i]->y >=query->bottom->y and points[i]->y <=query->top->y)
                     {
                         cout<<"( "<<points[i]->x<<" , "<<points[i]->y<<" ) ,";
                     }
@@ -567,7 +567,7 @@ class rtree
                 node *newroot=new node(false);
                 newroot->insert_child(cursor,false);
                 newroot->insert_child(newinternal,false);
-                newroot->box=new mbb(cursor->box->bottom[0],cursor->box->bottom[1],cursor->box->top[0],cursor->box->top[1]);
+                newroot->box=new mbb(cursor->box->bottom->x,cursor->box->bottom->y,cursor->box->top->x,cursor->box->top->y);
                 newroot->box->handle_newobj(newinternal->box);
                 root=newroot;
             }
@@ -637,15 +637,15 @@ int main()
                     coordinate(10,20),coordinate(30,60),coordinate(5,5)};
     for(int i=0;i<9;i++)
         tree.insert(&p[i]);
-    cout<<tree.root->box->bottom[0]<<tree.root->box->bottom[1];
-    cout<<tree.root->box->top[0]<<tree.root->box->top[1]<<endl;
+    cout<<tree.root->box->bottom->x<<tree.root->box->bottom->y;
+    cout<<tree.root->box->top->x<<tree.root->box->top->y<<endl;
 
     mbb *m=new mbb(40,40,60,60);
     tree.knn(3,&coordinate(10,10));
+    tree.range_search(&mbb(0,0,20,20));
     //cout<<tree.root->child[0]->child[0]->no_childs<<tree.root->child[0]->child[0]->no_points<<endl;
-    //cout<<tree.root->child[0]->child[0]->box->bottom[0]<<tree.root->child[0]->child[0]->box->bottom[1];
-    //cout<<tree.root->child[0]->child[0]->box->top[0]<<tree.root->child[0]->child[0]->box->top[1];
+    //cout<<tree.root->child[0]->child[0]->box->bottom->x<<tree.root->child[0]->child[0]->box->bottom->y;
+    //cout<<tree.root->child[0]->child[0]->box->top->x<<tree.root->child[0]->child[0]->box->top->y;
     return 1;
 }
-//Convert the points in the mbb as a coordinates.
 //Add complex objects in r trees.
