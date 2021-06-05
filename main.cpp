@@ -648,4 +648,5 @@ int main()
     //cout<<tree.root->child[0]->child[0]->box->top->x<<tree.root->child[0]->child[0]->box->top->y;
     return 1;
 }
+//Add deletion in r trees
 //Add complex objects in r trees.
