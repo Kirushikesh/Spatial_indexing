@@ -26,7 +26,44 @@ class coordinate
         y=b;
     }
 
+    int squ_euclidean(coordinate *ano)
+    {
+        return pow(ano->x-x,2)+pow(ano->y-y,2);
+    }
+
 };
+
+//adds a new coordinate into the results list based on insertion sort method
+void add_knn(coordinate *newpnt,int distance,coordinate** results,int dis[],int no,int k)
+{
+    cout<<"new point coordinates is "<<newpnt->x<<newpnt->y<<endl<<" distance from q is "<<distance<<endl;
+    if(no==k)
+    {
+        int i=no-2;
+        while(distance<dis[i] and i>=0)
+        {
+            dis[i+1]=dis[i];
+            results[i+1]=results[i];
+            i--;
+        }
+        cout<<"new point inserted in the index "<<i+1<<endl;
+        results[i+1]=newpnt;
+        dis[i+1]=distance;
+    }
+    else
+    {
+        int i=no-1;
+        while(distance<dis[i] and i>=0)
+        {
+            dis[i+1]=dis[i];
+            results[i+1]=results[i];
+            i--;
+        }
+        cout<<"new point inserted in the index "<<i+1<<endl;
+        results[i+1]=newpnt;
+        dis[i+1]=distance;
+    }
+}
 
 class mbb
 {
@@ -118,6 +155,19 @@ class mbb
         return false;
     }
 
+    int mindist(coordinate *qi)
+    {
+        int min=0;
+        if(qi->x<bottom[0])
+            min+=pow(qi->x-bottom[0],2);
+        else if(qi->x>top[0])
+            min+=pow(qi->x-top[0],2);
+        if(qi->y<bottom[1])
+            min+=pow(qi->y-bottom[1],2);
+        else if(qi->y>top[1])
+            min+=pow(qi->y-top[1],2);
+        return min;
+    }
 };
 
 //convert a point to box
@@ -302,6 +352,65 @@ class node
             }
         }
     }
+
+    //sorts the node based on mindis
+    void sort_branchlist(node **branchlist,int dis[],int n)
+    {
+        int i, key, j;
+        node *temp;
+        for (i = 1; i < n; i++)
+        {
+            temp=branchlist[i];
+            key = dis[i];
+            j = i - 1;
+
+            while (j >= 0 && dis[j] > key)
+            {
+                dis[j + 1] = dis[j];
+                branchlist[j+1]=branchlist[j];
+                j = j - 1;
+            }
+            dis[j + 1] = key;
+            branchlist[j+1]=temp;
+        }
+    }
+
+    int knn_helper(coordinate **results,int dis[],coordinate *query,int cur,int k)
+    {
+        int i=0,d;
+        if(isleaf==true)
+        {
+            for(i=0;i<no_points;i++)
+            {
+                d=query->squ_euclidean(points[i]);
+                if(d<dis[cur-1])
+                    add_knn(points[i],d,results,dis,cur,k);
+                if(cur<k)
+                    cur++;
+            }
+        }
+        else
+        {
+            node **branchlist=new node*[no_childs];
+            int mindis[no_childs];
+            for(i=0;i<no_childs;i++)
+            {
+                branchlist[i]=child[i];
+                mindis[i]=child[i]->box->mindist(query);
+            }
+            sort_branchlist(branchlist,mindis,no_childs);
+
+            for(i=0;i<no_childs;i++)
+            {
+                if(mindis[i]<=dis[cur-1])
+                {
+                    cur=branchlist[i]->knn_helper(results,dis,query,cur,k);
+                }
+            }
+        }
+        return cur;
+    }
+
 };
 
 class rtree
@@ -494,6 +603,23 @@ class rtree
             cout<<"No points occur"<<endl;
         }
     }
+
+    void knn(int k,coordinate *query)
+    {
+        coordinate **results=new coordinate*[k];
+        int dis[k],no=0;
+        for(int i=0;i<k;i++)
+        {
+            results[i]=NULL;
+            dis[i]=9999;
+        }
+        no=root->knn_helper(results,dis,query,no,k);
+        for(int i=0;i<no;i++)
+        {
+            cout<<results[i]->x<<results[i]->y<<endl;
+            cout<<dis[i]<<endl;
+        }
+    }
 };
 
 int main()
@@ -507,10 +633,11 @@ int main()
     //cout<<tree.root->box->top[0]<<tree.root->box->top[1]<<endl;
 
     mbb *m=new mbb(40,40,60,60);
-    tree.range_search(m);
+    tree.knn(3,&coordinate(7,7));
     //cout<<tree.root->child[0]->child[0]->no_childs<<tree.root->child[0]->child[0]->no_points<<endl;
     //cout<<tree.root->child[0]->child[0]->box->bottom[0]<<tree.root->child[0]->child[0]->box->bottom[1];
     //cout<<tree.root->child[0]->child[0]->box->top[0]<<tree.root->child[0]->child[0]->box->top[1];
     return 1;
 }
-//Convert the points in the mbb as a coordinates;
+//Convert the points in the mbb as a coordinates.
+//Add complex objects in r trees.
