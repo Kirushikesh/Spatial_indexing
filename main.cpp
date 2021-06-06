@@ -38,30 +38,19 @@ class coordinate
 //adds a new coordinate into the results list based on insertion sort method
 void add_knn(coordinate *newpnt,int distance,coordinate** results,int dis[],int no,int k)
 {
+    int i;
     if(no==k)
-    {
-        int i=no-2;
-        while(distance<dis[i] && i>=0)
-        {
-            dis[i+1]=dis[i];
-            results[i+1]=results[i];
-            i--;
-        }
-        results[i+1]=newpnt;
-        dis[i+1]=distance;
-    }
+        i=no-2;
     else
+        i=no-1;
+    while(distance<dis[i] && i>=0)
     {
-        int i=no-1;
-        while(distance<dis[i] && i>=0)
-        {
-            dis[i+1]=dis[i];
-            results[i+1]=results[i];
-            i--;
-        }
-        results[i+1]=newpnt;
-        dis[i+1]=distance;
+        dis[i+1]=dis[i];
+        results[i+1]=results[i];
+        i--;
     }
+    results[i+1]=newpnt;
+    dis[i+1]=distance;
 }
 
 class mbb
@@ -95,7 +84,8 @@ class mbb
         return (top->x-bottom->x)*(top->y-bottom->y);
     }
 
-    //calculate the overlapping area btwn 2 boxes
+    //calculate the overlapping area btwn 2 objects
+    //gives the accurate results only when both are boxes
     int overlapping_area(mbb* ano)
     {
         int x_dist=min(top->x,ano->top->x)-max(bottom->x,ano->bottom->x);
@@ -104,6 +94,13 @@ class mbb
         if(x_dist>0 && y_dist>0)
             area=x_dist*y_dist;
         return area;
+    }
+
+    //returns the min area enlargement when we try to add the box within this box
+    int area_enlargement(mbb *ano)
+    {
+        int totalarea=(max(top->x,ano->top->x)-min(bottom->x,ano->bottom->x))*((max(top->y,ano->top->y)-min(bottom->y,ano->bottom->y)));
+        return totalarea+overlapping_area(ano)-area()-ano->area();
     }
 
     //changes the box coordinate w.r.t the another box which is the child of this.
@@ -117,43 +114,6 @@ class mbb
             top->x=ano->top->x;
         if(top->y<ano->top->y)
             top->y=ano->top->y;
-    }
-
-    //returns the area enlargement when we try to add the box within this box
-    int area_enlargement(mbb *ano)
-    {
-        int totalarea=(max(top->x,ano->top->x)-min(bottom->x,ano->bottom->x))*((max(top->y,ano->top->y)-min(bottom->y,ano->bottom->y)));
-        return totalarea+overlapping_area(ano)-area()-ano->area();
-    }
-
-    //determine whether this rectangle touch with other rectangle
-    bool touch_box(mbb *box1)
-    {
-        //checks for touches from the top
-        if(bottom->y==box1->top->y)
-        {
-            if(!(top->x<box1->bottom->x || bottom->x>box1->top->x))
-                return true;
-        }
-        //checks for touches from the left
-        if(box1->bottom->x==top->x)
-        {
-            if(!(top->y<box1->bottom->y || bottom->y>box1->top->y))
-                return true;
-        }
-        //checks for touches from the right
-        if(box1->top->x==bottom->x)
-        {
-            if(!(top->y<box1->bottom->y || bottom->y>box1->top->y))
-                return true;
-        }
-        //checks for touches from the bottom
-        if(top->y==box1->bottom->y)
-        {
-            if(!(top->x<box1->bottom->x || bottom->x>box1->top->x))
-                return true;
-        }
-        return false;
     }
 
     //calculates the mindist btwn this box and a point
@@ -171,7 +131,8 @@ class mbb
         return min;
     }
 
-    bool cc(mbb *b)
+    //checks whether a line(box with area 0) intersects a box
+    bool intersects(mbb *b)
     {
         if((b->bottom->x>=bottom->x && b->top->x<=top->x) && (b->bottom->y>=bottom->y || b->top->y<=top->y))
             return true;
@@ -191,7 +152,7 @@ mbb *point_to_box(coordinate *co)
 //convert a box to coordinate
 coordinate* box_to_point(mbb *mo)
 {
-    coordinate *newco= new coordinate(mo->bottom->x,mo->bottom->y);
+    coordinate *newco= new coordinate(*mo->bottom);
     return newco;
 }
 
@@ -309,21 +270,19 @@ class node
         no_points++;
     }
 
-    void delete_point(coordinate *co)
+    //deletes the point in the leaf node at Ex index
+    void delete_point(int Ex)
     {
         coordinate *temp;
-        int i,j;
-        for(i=0;i<no_points;i++)
-            if(points[i]->x==co->x && points[i]->y==co->y)
-                break;
-        temp=points[i];
-        points[i]=NULL;
+        temp=points[Ex];
+        points[Ex]=NULL;
         delete temp;
-        for(j=i;j<no_points-1;j++)
+        int i;
+        for(i=Ex;i<no_points-1;i++)
         {
-            points[j]=points[j+1];
+            points[i]=points[i+1];
         }
-        points[j]=NULL;
+        points[i]=NULL;
         no_points--;
     }
 
@@ -332,12 +291,12 @@ class node
     {
         if(box==NULL)
             box=new mbb(*c->box);
-        //child[no_childs]=new node(type,c->level);
         child[no_childs]=c;
         box->handle_newobj(c->box);
         no_childs++;
     }
 
+    //Removes the child of the node at Ex index
     void remove_child(int Ex)
     {
         int i;
@@ -370,26 +329,58 @@ class node
         return temp;
     }
 
+    //adjust the node mbr after deletion
     void adjust_mbr()
     {
-        mbb *temp;
-        temp=box;
-        delete temp;
-        box=NULL;
-
-        int i;
+        int minx=999,maxx=-1,miny=999,maxy=-1,i;
         if(isleaf==true)
         {
-            box=new mbb(points[0],points[0]);
-            for(i=1;i<no_points;i++)
-                box->handle_newobj(point_to_box(points[i]));
+            for(i=0;i<no_points;i++)
+            {
+                if(points[i]->x<minx)
+                {
+                    minx=points[i]->x;
+                }
+                if(points[i]->x>maxx)
+                {
+                    maxx=points[i]->x;
+                }
+                if(points[i]->y<miny)
+                {
+                    miny=points[i]->y;
+                }
+                if(points[i]->y>maxy)
+                {
+                    maxy=points[i]->y;
+                }
+            }
         }
         else
         {
-            box=new mbb(*child[0]->box);
-            for(i=1;i<no_childs;i++)
-                box->handle_newobj(child[i]->box);
+            for(i=0;i<no_childs;i++)
+            {
+                if(child[i]->box->bottom->x<minx)
+                {
+                    minx=child[i]->box->bottom->x;
+                }
+                if(child[i]->box->top->x>maxx)
+                {
+                    maxx=child[i]->box->top->x;
+                }
+                if(child[i]->box->bottom->y<miny)
+                {
+                    miny=child[i]->box->bottom->y;
+                }
+                if(child[i]->box->top->y>maxy)
+                {
+                    maxy=child[i]->box->top->y;
+                }
+            }
         }
+        box->bottom->x=minx;
+        box->bottom->y=miny;
+        box->top->x=maxx;
+        box->top->y=maxy;
     }
 
     //searchs the point present within a query box coordinates
@@ -399,7 +390,7 @@ class node
         {
             for(int i=0;i<no_childs;i++)
             {
-                if(child[i]->box->overlapping_area(query)>0 || query->touch_box(child[i]->box) || query->cc(child[i]->box))
+                if(child[i]->box->overlapping_area(query)>0 || query->intersects(child[i]->box))
                     child[i]->range_search_helper(query);
             }
         }
@@ -407,12 +398,9 @@ class node
         {
             for(int i=0;i<no_points;i++)
             {
-                if(points[i]->x >=query->bottom->x && points[i]->x <=query->top->x)
+                if(query->area_enlargement(point_to_box(points[i]))==0)
                 {
-                    if(points[i]->y >=query->bottom->y && points[i]->y <=query->top->y)
-                    {
-                        cout<<"( "<<points[i]->x<<" , "<<points[i]->y<<" ) ,";
-                    }
+                    cout<<"( "<<points[i]->x<<" , "<<points[i]->y<<" ) ,";
                 }
             }
         }
@@ -422,52 +410,6 @@ class node
     int knn_helper(coordinate **results,int dis[],coordinate *query,int cur,int k);
 
 };
-
-node* find_leaf(node *cursor,coordinate *query)
-{
-    int i;
-    if(cursor->isleaf==true)
-    {
-        for(i=0;i<cursor->no_points;i++)
-        {
-            if(query->x==cursor->points[i]->x && query->y==cursor->points[i]->y)
-                return cursor;
-        }
-    }
-    else
-    {
-        node *temp;
-        for(i=0;i<cursor->no_childs;i++)
-        {
-            if(cursor->child[i]->box->mindist(query)==0)
-            {
-                temp=find_leaf(cursor->child[i],query);
-                if(temp!=NULL)
-                    return temp;
-            }
-        }
-    }
-    return NULL;
-}
-
-node* find_lvl_node(node *cursor,int lvl,mbb *b)
-{
-    if(cursor->level==lvl)
-        return cursor;
-
-    int i,minnode,minarea=9999,temp;
-
-    for(i=0;i<cursor->no_childs;i++)
-    {
-        temp=cursor->child[i]->box->area_enlargement(b);
-        if(minarea>temp)
-        {
-            minarea=temp;
-            minnode=i;
-        }
-    }
-    return find_lvl_node(cursor->child[minnode],lvl,b);
-}
 
 //sorts the node based on mindis uses insertion sort
 void sort_branchlist(node **branchlist,int dis[],int n)
@@ -500,7 +442,7 @@ int node::knn_helper(coordinate **results,int dis[],coordinate *query,int cur,in
         for(i=0;i<no_points;i++)
         {
             d=query->squ_euclidean(points[i]);
-            if(d<=dis[cur-1])
+            if(d<=dis[cur-1] || cur<k)
                 add_knn(points[i],d,results,dis,cur,k);
                 if(cur<k)
                     cur++;
@@ -516,6 +458,7 @@ int node::knn_helper(coordinate **results,int dis[],coordinate *query,int cur,in
             branchlist[i]=child[i];
             mindis[i]=child[i]->box->mindist(query);
         }
+
         sort_branchlist(branchlist,mindis,no_childs);
         for(i=0;i<no_childs;i++)
         {
@@ -526,6 +469,27 @@ int node::knn_helper(coordinate **results,int dis[],coordinate *query,int cur,in
         }
     }
     return cur;
+}
+
+//find the same level node which can contain b
+node* find_lvl_node(node *cursor,int lvl,mbb *b)
+{
+    if(cursor->level==lvl)
+        return cursor;
+
+    int i,minnode,minarea=9999,temp;
+
+    for(i=0;i<cursor->no_childs;i++)
+    {
+        temp=cursor->child[i]->box->area_enlargement(b);
+        if(minarea>temp)
+        {
+            minarea=temp;
+            minnode=i;
+        }
+    }
+
+    return find_lvl_node(cursor->child[minnode],lvl,b);
 }
 
 class rtree
@@ -709,7 +673,7 @@ class rtree
     //finds all the points inside a box m
     void range_search(mbb *m)
     {
-        if(root->box->overlapping_area(m)>0 || root->no_points==1 || m->touch_box(root->box))
+        if(root->box->overlapping_area(m)>0 || root->no_points==1 )
         {
             root->range_search_helper(m);
         }
@@ -787,11 +751,13 @@ class rtree
 
     void deletion(coordinate *element)
     {
-        node *L=find_leaf(root,element),*temp;
-        if(L==NULL)
-            return;
+        int i;
+        node *L=find_lvl_node(root,0,point_to_box(element)),*temp;
+        for(int i=0;i<L->no_points;i++)
+            if(L->points[i]->x==element->x && L->points[i]->y==element->y)
+                break;
 
-        L->delete_point(element);
+        L->delete_point(i);
 
         condense_tree(L);
 
