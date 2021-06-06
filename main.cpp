@@ -753,7 +753,7 @@ class rtree
     {
         int i;
         node *L=find_lvl_node(root,0,point_to_box(element)),*temp;
-        for(int i=0;i<L->no_points;i++)
+        for(i=0;i<L->no_points;i++)
             if(L->points[i]->x==element->x && L->points[i]->y==element->y)
                 break;
 
