@@ -35,24 +35,6 @@ class coordinate
 
 };
 
-//adds a new coordinate into the results list based on insertion sort method
-void add_knn(coordinate *newpnt,int distance,coordinate** results,int dis[],int no,int k)
-{
-    int i;
-    if(no==k)
-        i=no-2;
-    else
-        i=no-1;
-    while(distance<dis[i] && i>=0)
-    {
-        dis[i+1]=dis[i];
-        results[i+1]=results[i];
-        i--;
-    }
-    results[i+1]=newpnt;
-    dis[i+1]=distance;
-}
-
 class mbb
 {
     public:
@@ -76,6 +58,12 @@ class mbb
     {
         bottom=new coordinate(*ano.bottom);
         top=new coordinate(*ano.top);
+    }
+
+    void print_mbb()
+    {
+        cout<<"Bottom Left is ( "<<bottom->x<<" , "<<bottom->y<<" )";
+        cout<<" And the Top Right is ( "<<top->x<<" , "<<top->y<<" )\n";
     }
 
     //calculates the area of the bounding box
@@ -134,26 +122,51 @@ class mbb
     //checks whether a line(box with area 0) intersects a box
     bool intersects(mbb *b)
     {
-        if((b->bottom->x>=bottom->x && b->top->x<=top->x) && (b->bottom->y>=bottom->y || b->top->y<=top->y))
+        if((b->bottom->x>=bottom->x && b->top->x<=top->x) && !(b->bottom->y>top->y || b->top->y<bottom->y))
             return true;
-        else if((b->bottom->x>=bottom->x || b->top->x<=top->x) && (b->bottom->y>=bottom->y && b->top->y<=top->y))
+        else if(!(b->bottom->x > top->x || b->top->x < bottom->x) && (b->bottom->y>=bottom->y && b->top->y<=top->y))
             return true;
         return false;
     }
 };
 
-//convert a point to box
-mbb *point_to_box(coordinate *co)
+class element
 {
-    mbb *newbox=new mbb(co,co);
-    return newbox;
-}
+    public:
 
-//convert a box to coordinate
-coordinate* box_to_point(mbb *mo)
+    int key;
+    mbb* box;
+
+    element(int k,coordinate c)
+    {
+        key=k;
+        box=new mbb(&c,&c);
+    }
+
+    void print_element()
+    {
+        cout<<"The key is "<<key<<endl;
+        box->print_mbb();
+    }
+
+};
+
+//adds a new coordinate into the results list based on insertion sort method
+void add_knn(element *newpnt,int distance,element** results,int dis[],int no,int k)
 {
-    coordinate *newco= new coordinate(*mo->bottom);
-    return newco;
+    int i;
+    if(no==k)
+        i=no-2;
+    else
+        i=no-1;
+    while(distance<dis[i] && i>=0)
+    {
+        dis[i+1]=dis[i];
+        results[i+1]=results[i];
+        i--;
+    }
+    results[i+1]=newpnt;
+    dis[i+1]=distance;
 }
 
 //returns boxes index which are having maximum dead space
@@ -239,10 +252,10 @@ class node
 
     bool isleaf;
     mbb *box;
-    coordinate *points[M];
+    element *leafs[M];
     node *child[M];
     int level;
-    int no_points;
+    int no_leafs;
     int no_childs;
 
     node(bool leaf,int l)
@@ -251,39 +264,39 @@ class node
         box = NULL;
         for(int i=0;i<M;i++)
         {
-            points[i]=NULL;
+            leafs[i]=NULL;
             child[i]=NULL;
         }
-        no_points=0;
+        no_leafs=0;
         no_childs=0;
         level=l;
     }
 
     //insert a new point in the leaf node
-    void insert_point(coordinate *co)
+    void insert_leaf(element *e)
     {
         if(box==NULL)
-            box=new mbb(co,co);
-        //points[no_points]=new coordinate(*co);
-        points[no_points]=co;
-        box->handle_newobj(point_to_box(co));
-        no_points++;
+            box=new mbb(*e->box);
+        leafs[no_leafs]=e;
+        box->handle_newobj(e->box);
+        no_leafs++;
     }
 
     //deletes the point in the leaf node at Ex index
-    void delete_point(int Ex)
+    void delete_leaf(int Ex)
     {
-        coordinate *temp;
-        temp=points[Ex];
-        points[Ex]=NULL;
+        element *temp;
+        temp=leafs[Ex];
+        leafs[Ex]=NULL;
         delete temp;
+
         int i;
-        for(i=Ex;i<no_points-1;i++)
+        for(i=Ex;i<no_leafs-1;i++)
         {
-            points[i]=points[i+1];
+            leafs[i]=leafs[i+1];
         }
-        points[i]=NULL;
-        no_points--;
+        leafs[i]=NULL;
+        no_leafs--;
     }
 
     //insert a new child node in a non leaf node
@@ -309,14 +322,22 @@ class node
         no_childs--;
     }
 
-    //converts the points to boxes and return it
-    mbb** create_list(coordinate *next)
+    void print_node()
     {
-        mbb **temp=new mbb*[M+1];
-        for(int i=0;i<M;i++)
-            temp[i]=point_to_box(points[i]);
-        temp[M]=point_to_box(next);
-        return temp;
+        cout<<"Node dimensions are\n";
+        box->print_mbb();
+        cout<<"No of childs are "<<no_childs<<" No of Leafs "<<no_leafs<<endl;
+        cout<<" Level of the node is "<<level<<endl;
+        if(isleaf==true)
+        {
+            for(int i=0;i<no_leafs;i++)
+                leafs[i]->box->print_mbb();
+        }
+        else
+        {
+            for(int i=0;i<no_childs;i++)
+                child[i]->box->print_mbb();
+        }
     }
 
     //returns a list of all mbb including next
@@ -329,29 +350,39 @@ class node
         return temp;
     }
 
+    //returns a list of all mbb including next
+    mbb** create_list(element *next)
+    {
+        mbb **temp=new mbb*[M+1];
+        for(int i=0;i<M;i++)
+            temp[i]=leafs[i]->box;
+        temp[M]=next->box;
+        return temp;
+    }
+
     //adjust the node mbr after deletion
     void adjust_mbr()
     {
         int minx=999,maxx=-1,miny=999,maxy=-1,i;
         if(isleaf==true)
         {
-            for(i=0;i<no_points;i++)
+            for(i=0;i<no_leafs;i++)
             {
-                if(points[i]->x<minx)
+                if(leafs[i]->box->bottom->x<minx)
                 {
-                    minx=points[i]->x;
+                    minx=leafs[i]->box->bottom->x;
                 }
-                if(points[i]->x>maxx)
+                if(leafs[i]->box->top->x>maxx)
                 {
-                    maxx=points[i]->x;
+                    maxx=leafs[i]->box->top->x;
                 }
-                if(points[i]->y<miny)
+                if(leafs[i]->box->bottom->y<miny)
                 {
-                    miny=points[i]->y;
+                    miny=leafs[i]->box->bottom->y;
                 }
-                if(points[i]->y>maxy)
+                if(leafs[i]->box->top->y>maxy)
                 {
-                    maxy=points[i]->y;
+                    maxy=leafs[i]->box->top->y;
                 }
             }
         }
@@ -390,24 +421,25 @@ class node
         {
             for(int i=0;i<no_childs;i++)
             {
-                if(child[i]->box->overlapping_area(query)>0 || query->intersects(child[i]->box))
+                if(query->overlapping_area(child[i]->box)>0 || query->intersects(child[i]->box))
                     child[i]->range_search_helper(query);
             }
         }
         else
         {
-            for(int i=0;i<no_points;i++)
+            for(int i=0;i<no_leafs;i++)
             {
-                if(query->area_enlargement(point_to_box(points[i]))==0)
+                if(query->overlapping_area(leafs[i]->box)>0 || query->intersects(leafs[i]->box) )
                 {
-                    cout<<"( "<<points[i]->x<<" , "<<points[i]->y<<" ) ,";
+                    cout<<"The key is "<<leafs[i]->key<<endl;
+                    leafs[i]->box->print_mbb();
                 }
             }
         }
     }
 
     //finds the knn based on the query point (declared outside)
-    int knn_helper(coordinate **results,int dis[],coordinate *query,int cur,int k);
+    int knn_helper(element **results,int dis[],coordinate *query,int cur,int k);
 
 };
 
@@ -434,16 +466,16 @@ void sort_branchlist(node **branchlist,int dis[],int n)
 }
 
 //finds the knn based on the query point
-int node::knn_helper(coordinate **results,int dis[],coordinate *query,int cur,int k)
+int node::knn_helper(element **results,int dis[],coordinate *query,int cur,int k)
 {
     int i=0,d;
     if(isleaf==true)
     {
-        for(i=0;i<no_points;i++)
+        for(i=0;i<no_leafs;i++)
         {
-            d=query->squ_euclidean(points[i]);
+            d=leafs[i]->box->mindist(query);
             if(d<=dis[cur-1] || cur<k)
-                add_knn(points[i],d,results,dis,cur,k);
+                add_knn(leafs[i],d,results,dis,cur,k);
                 if(cur<k)
                     cur++;
         }
@@ -503,12 +535,12 @@ class rtree
     }
 
     //insert a point in the tree
-    void insert(coordinate *co)
+    void insert(element *co)
     {
         if(root==NULL)
         {
             root=new node(true,0);
-            root->insert_point(co);
+            root->insert_leaf(co);
         }
         else
         {
@@ -517,12 +549,12 @@ class rtree
             while(cursor->isleaf==false)
             {
                 parent=cursor;
-                parent->box->handle_newobj(point_to_box(co));
+                parent->box->handle_newobj(co->box);
                 int i,minnode,minarea=9999,temp;
 
                 for(i=0;i<cursor->no_childs;i++)
                 {
-                    temp=cursor->child[i]->box->area_enlargement(point_to_box(co));
+                    temp=cursor->child[i]->box->area_enlargement(co->box);
                     if(minarea>temp)
                     {
                         minarea=temp;
@@ -531,25 +563,32 @@ class rtree
                 }
                 cursor=cursor->child[minnode];
             }
-
-            if(cursor->no_points<M)
+            if(cursor->no_leafs<M)
             {
-                cursor->insert_point(co);
+                cursor->insert_leaf(co);
             }
             else
             {
+                int i;
                 node *newleaf=new node(true,0);
-                mbb **all_points=cursor->create_list(co);
-                cursor->no_points=0;
+                mbb **all_leafs=cursor->create_list(co);
+                element *virtualelement[M+1];
+                for(i=0;i<M;i++)
+                {
+                    virtualelement[i]=cursor->leafs[i];
+                }
+                virtualelement[M]=co;
+
+                cursor->no_leafs=0;
                 cursor->box=NULL;
 
                 bool presence[M+1];
-                for(int i=0;i<M+1;i++)
+                for(i=0;i<M+1;i++)
                     presence[i]=false;
 
-                int *seeds=pick_seed(all_points);
-                cursor->insert_point(box_to_point(all_points[seeds[0]]));
-                newleaf->insert_point(box_to_point(all_points[seeds[1]]));
+                int *seeds=pick_seed(all_leafs);
+                cursor->insert_leaf(virtualelement[seeds[0]]);
+                newleaf->insert_leaf(virtualelement[seeds[1]]);
 
                 presence[seeds[0]]=true;
                 presence[seeds[1]]=true;
@@ -557,15 +596,15 @@ class rtree
                 int no1=1,no2=1,*next;
                 while(no1+no2<M+1)
                 {
-                    next=pick_next(all_points,cursor->box,newleaf->box,presence,no1,no2);
+                    next=pick_next(all_leafs,cursor->box,newleaf->box,presence,no1,no2);
                     if(next[0]==1)
                     {
-                        cursor->insert_point(box_to_point(all_points[next[1]]));
+                        cursor->insert_leaf(virtualelement[next[1]]);
                         no1++;
                     }
                     else
                     {
-                        newleaf->insert_point(box_to_point(all_points[next[1]]));
+                        newleaf->insert_leaf(virtualelement[next[1]]);
                         no2++;
                     }
                     presence[next[1]]=true;
@@ -608,7 +647,7 @@ class rtree
             virtualchild[M]=child;
 
             bool presence[M+1];
-            for(int i=0;i<M+1;i++)
+            for(i=0;i<M+1;i++)
                 presence[i]=false;
             int *seeds=pick_seed(all_boxes);
             cursor->insert_child(virtualchild[seeds[0]]);
@@ -673,7 +712,7 @@ class rtree
     //finds all the points inside a box m
     void range_search(mbb *m)
     {
-        if(root->box->overlapping_area(m)>0 || root->no_points==1 )
+        if(m->overlapping_area(root->box)>0 || m->intersects(root->box))
         {
             root->range_search_helper(m);
         }
@@ -686,7 +725,7 @@ class rtree
     //finds knn wrt the k and query point
     void knn(int k,coordinate *query)
     {
-        coordinate **results=new coordinate*[k];
+        element **results=new element*[k];
         int dis[k],no=0;
         for(int i=0;i<k;i++)
         {
@@ -697,7 +736,33 @@ class rtree
         no=root->knn_helper(results,dis,query,no,k);
         for(int i=0;i<no;i++)
         {
-            cout<<"Point is ("<<results[i]->x<<" , "<<results[i]->y<<" ) and distance is "<<dis[i]<<endl;
+            results[i]->print_element();
+            cout<<" and distance is "<<dis[i]<<endl;
+        }
+    }
+
+    void deletion(element *e)
+    {
+        int i;
+        node *L=find_lvl_node(root,0,e->box),*temp;
+
+        for(i=0;i<L->no_leafs;i++)
+            if(L->leafs[i]->key==e->key)
+                break;
+
+        L->delete_leaf(i);
+
+        condense_tree(L);
+
+        if(root->no_childs==1)
+        {
+            temp=root->child[0];
+            delete root;
+            root=temp;
+        }
+        else
+        {
+            root->adjust_mbr();
         }
     }
 
@@ -714,7 +779,7 @@ class rtree
                     break;
             Ex=i;
 
-            if(X->isleaf==true && X->no_points<ceil((float)M/2))
+            if(X->isleaf==true && X->no_leafs<ceil((float)M/2))
             {
                 N.push_back(X);
                 parentx->remove_child(Ex);
@@ -735,8 +800,8 @@ class rtree
         {
             if(N[i]->isleaf==true)
             {
-                for(j=0;j<N[i]->no_points;j++)
-                    insert(N[i]->points[j]);
+                for(j=0;j<N[i]->no_leafs;j++)
+                    insert(N[i]->leafs[j]);
             }
             else
             {
@@ -749,51 +814,29 @@ class rtree
         }
     }
 
-    void deletion(coordinate *element)
-    {
-        int i;
-        node *L=find_lvl_node(root,0,point_to_box(element)),*temp;
-        for(i=0;i<L->no_points;i++)
-            if(L->points[i]->x==element->x && L->points[i]->y==element->y)
-                break;
-
-        L->delete_point(i);
-
-        condense_tree(L);
-
-        if(root->no_childs==1)
-        {
-            temp=root->child[0];
-            delete root;
-            root=temp;
-        }
-        else
-        {
-            root->adjust_mbr();
-        }
-    }
 };
 
 int main()
 {
     rtree tree;
-    coordinate p[]={coordinate(0,0),coordinate(2,3),coordinate(2,2),coordinate(2,4),coordinate(4,4),coordinate(5,3),
-                    coordinate(7,4),coordinate(5,5),coordinate(5,7),coordinate(7,7),coordinate(1,1)};
+    element p[]={element(1,coordinate(0,0)),element(2,coordinate(2,3)),element(3,coordinate(2,2)),
+                 element(4,coordinate(2,4)),element(5,coordinate(4,4)),element(6,coordinate(5,3)),
+                 element(7,coordinate(7,4)),element(8,coordinate(5,5)),element(9,coordinate(5,7)),
+                 element(10,coordinate(7,7)),element(11,coordinate(1,1)) };
     for(int i=0;i<11;i++)
         tree.insert(&p[i]);
-    tree.deletion(&coordinate(0,0));
-    tree.deletion(&coordinate(4,4));
-    cout<<tree.root->box->bottom->x<<tree.root->box->bottom->y;
-    cout<<tree.root->box->top->x<<tree.root->box->top->y<<endl;
+    //tree.deletion(&element(1,coordinate(0,0)));
+    tree.deletion(&element(5,coordinate(4,4)));
+    tree.root->print_node();
+    tree.root->child[0]->print_node();
 
     //mbb *m=new mbb(4,3,5,7);
     //tree.knn(3,&coordinate(4,6));
-    //tree.range_search(&mbb(0,0,5,6));
+    //tree.range_search(&mbb(0,0,2,4));
 
-    //cout<<tree.root->no_childs<<tree.root->no_points<<tree.root->level<<endl;
     //cout<<tree.root->child[0]->box->bottom->x<<tree.root->child[0]->box->bottom->y;
     //cout<<tree.root->child[0]->box->top->x<<tree.root->child[0]->box->top->y;
     return 1;
 }
-// Add complex objects in r trees.
+// Search for a element and Find the key of the object in which a point present
 // Add OpenCV for visualization.
