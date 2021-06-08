@@ -27,12 +27,6 @@ class coordinate
         y=b;
     }
 
-    //computes the squared euclidean distance between this and another point
-    int squ_euclidean(coordinate *ano)
-    {
-        return pow(ano->x-x,2)+pow(ano->y-y,2);
-    }
-
 };
 
 class mbb
@@ -130,45 +124,6 @@ class mbb
     }
 };
 
-class element
-{
-    public:
-
-    int key;
-    mbb* box;
-
-    element(int k,coordinate c)
-    {
-        key=k;
-        box=new mbb(&c,&c);
-    }
-
-    void print_element()
-    {
-        cout<<"The key is "<<key<<endl;
-        box->print_mbb();
-    }
-
-};
-
-//adds a new coordinate into the results list based on insertion sort method
-void add_knn(element *newpnt,int distance,element** results,int dis[],int no,int k)
-{
-    int i;
-    if(no==k)
-        i=no-2;
-    else
-        i=no-1;
-    while(distance<dis[i] && i>=0)
-    {
-        dis[i+1]=dis[i];
-        results[i+1]=results[i];
-        i--;
-    }
-    results[i+1]=newpnt;
-    dis[i+1]=distance;
-}
-
 //returns boxes index which are having maximum dead space
 int *pick_seed(mbb **tot)
 {
@@ -244,6 +199,45 @@ int* pick_next(mbb **tot,mbb *box1,mbb *box2,bool *presence,int no1,int no2)
 
     result[1]=i;
     return result;
+}
+
+class element
+{
+    public:
+
+    int key;
+    mbb* box;
+
+    element(int k,coordinate c)
+    {
+        key=k;
+        box=new mbb(&c,&c);
+    }
+
+    void print_element()
+    {
+        cout<<"The key is "<<key<<endl;
+        box->print_mbb();
+    }
+
+};
+
+//adds a new coordinate into the results list based on insertion sort method
+void add_knn(element *newpnt,int distance,element** results,int dis[],int no,int k)
+{
+    int i;
+    if(no==k)
+        i=no-2;
+    else
+        i=no-1;
+    while(distance<dis[i] && i>=0)
+    {
+        dis[i+1]=dis[i];
+        results[i+1]=results[i];
+        i--;
+    }
+    results[i+1]=newpnt;
+    dis[i+1]=distance;
 }
 
 class node
@@ -438,6 +432,24 @@ class node
         }
     }
 
+    //searchs object which contain coordinate e
+    void search_obj(coordinate *e)
+    {
+        int i;
+        if(isleaf==true)
+        {
+            for(i=0;i<no_leafs;i++)
+                if(leafs[i]->box->mindist(e)==0)
+                    leafs[i]->print_element();
+        }
+        else
+        {
+            for(i=0;i<no_childs;i++)
+                if(child[i]->box->mindist(e)==0)
+                    child[i]->search_obj(e);
+        }
+    }
+
     //finds the knn based on the query point (declared outside)
     int knn_helper(element **results,int dis[],coordinate *query,int cur,int k);
 
@@ -522,6 +534,26 @@ node* find_lvl_node(node *cursor,int lvl,mbb *b)
     }
 
     return find_lvl_node(cursor->child[minnode],lvl,b);
+}
+
+//returns the parent of a node
+node * findparent(node *cursor,node *child)
+{
+    node *parent;
+    if(cursor->isleaf)
+        return NULL;
+    for(int i=0;i<cursor->no_childs;i++)
+    {
+        if(cursor->child[i]==child)
+            return cursor;
+        else
+        {
+            parent=findparent(cursor->child[i],child);
+            if(parent!=NULL)
+                return parent;
+        }
+    }
+    return parent;
 }
 
 class rtree
@@ -689,26 +721,6 @@ class rtree
         }
     }
 
-    //returns the parent of a node
-    node * findparent(node *cursor,node *child)
-    {
-        node *parent;
-        if(cursor->isleaf)
-            return NULL;
-        for(int i=0;i<cursor->no_childs;i++)
-        {
-            if(cursor->child[i]==child)
-                return cursor;
-            else
-            {
-                parent=findparent(cursor->child[i],child);
-                if(parent!=NULL)
-                    return parent;
-            }
-        }
-        return parent;
-    }
-
     //finds all the points inside a box m
     void range_search(mbb *m)
     {
@@ -741,6 +753,7 @@ class rtree
         }
     }
 
+    //deletes a element
     void deletion(element *e)
     {
         int i;
@@ -766,6 +779,7 @@ class rtree
         }
     }
 
+    //Maps the node L into its appropriate place
     void condense_tree(node *L)
     {
         node *X=L,*parentx,*temp;
@@ -814,6 +828,32 @@ class rtree
         }
     }
 
+    //searchs for a element in the rtree
+    void search(element *e)
+    {
+        int i;
+        node *L=find_lvl_node(root,0,e->box);
+
+        for(i=0;i<L->no_leafs;i++)
+            if(L->leafs[i]->key==e->key)
+                break;
+
+        if(i==L->no_leafs)
+        {
+            cout<<"Element Not Found\n";
+        }
+        else
+        {
+            cout<<"Element Found\n";
+            e->print_element();
+        }
+    }
+
+    //finds the object in which the query point present
+    void findobj_wrt_point(coordinate *query)
+    {
+        root->search_obj(query);
+    }
 };
 
 int main()
@@ -826,17 +866,15 @@ int main()
     for(int i=0;i<11;i++)
         tree.insert(&p[i]);
     //tree.deletion(&element(1,coordinate(0,0)));
-    tree.deletion(&element(5,coordinate(4,4)));
-    tree.root->print_node();
-    tree.root->child[0]->print_node();
-
+    //tree.deletion(&element(5,coordinate(4,4)));
+    //tree.root->print_node();
+    //tree.root->child[0]->print_node();
+    //tree.search(&element(5,coordinate(4,5)));
     //mbb *m=new mbb(4,3,5,7);
     //tree.knn(3,&coordinate(4,6));
     //tree.range_search(&mbb(0,0,2,4));
 
-    //cout<<tree.root->child[0]->box->bottom->x<<tree.root->child[0]->box->bottom->y;
-    //cout<<tree.root->child[0]->box->top->x<<tree.root->child[0]->box->top->y;
     return 1;
 }
-// Search for a element and Find the key of the object in which a point present
-// Add OpenCV for visualization.
+
+// Add OpenGL for visualization.
