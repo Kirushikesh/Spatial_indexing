@@ -1,6 +1,9 @@
 # depslib dependency file v1.0
-1623219135 source:d:\packages\3rd sem\spatial_indexing\main.cpp
+1623242508 source:d:\packages\3rd sem\spatial_indexing\main.cpp
 	<iostream>
+	<fstream>
+	<vector>
+	<sstream>
 	"rtree.h"
 	"opengl.h"
 
@@ -210,7 +213,7 @@
 1228530724 c:\program files (x86)\codeblocks\mingw\include\oleidl.h
 	<objfwd.h>
 
-1614229948 c:\program files (x86)\codeblocks\mingw\include\gl\glut.h
+976692172 c:\program files (x86)\codeblocks\mingw\include\gl\glut.h
 	<windows.h>
 	<GL/gl.h>
 	<GL/glu.h>

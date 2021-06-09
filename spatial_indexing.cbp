@@ -30,6 +30,9 @@
 			<Add directory="C:\Program Files (x86)\CodeBlocks\MinGW\lib" />
 		</Linker>
 		<Unit filename="main.cpp" />
+		<Unit filename="opengl.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
 		<Unit filename="rtree.h">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
