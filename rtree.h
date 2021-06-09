@@ -3,10 +3,7 @@
 
 #include<iostream>
 #include<cmath>
-#include<windows.h>
-#include <GL/glut.h>
 #include<vector>
-#include<queue>
 
 using namespace std;
 
@@ -217,10 +214,10 @@ class element
     int key;
     mbb* box;
 
-    element(int k,coordinate c)
+    element(int k,mbb *c)
     {
         key=k;
-        box=new mbb(&c,&c);
+        box=c;
     }
 
     void print_element()

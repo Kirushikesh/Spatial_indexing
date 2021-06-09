@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1623242508 source:d:\packages\3rd sem\spatial_indexing\main.cpp
+1623251195 source:d:\packages\3rd sem\spatial_indexing\main.cpp
 	<iostream>
 	<fstream>
 	<vector>
@@ -7,7 +7,13 @@
 	"rtree.h"
 	"opengl.h"
 
-1623219087 d:\packages\3rd sem\spatial_indexing\opengl.h
+1623251328 d:\packages\3rd sem\spatial_indexing\opengl.h
+	<windows.h>
+	<GL/glut.h>
+	<queue>
+	<fstream>
+	<vector>
+	<sstream>
 
 1228530732 c:\program files (x86)\codeblocks\mingw\include\windows.h
 	<winresrc.h>
@@ -227,11 +233,8 @@
 1250308678 c:\program files (x86)\codeblocks\mingw\include\math.h
 	<_mingw.h>
 
-1623219112 d:\packages\3rd sem\spatial_indexing\rtree.h
+1623251100 d:\packages\3rd sem\spatial_indexing\rtree.h
 	<iostream>
 	<cmath>
-	<windows.h>
-	<GL/glut.h>
 	<vector>
-	<queue>
 

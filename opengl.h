@@ -1,7 +1,90 @@
 #ifndef OPENGL_H_INCLUDED
 #define OPENGL_H_INCLUDED
 
+#include<windows.h>
+#include <GL/glut.h>
+#include<queue>
+#include<fstream>
+#include<vector>
+#include <sstream>
+
 node *mainroot=NULL;
+
+void draw_polygon(int nop,coordinate **co)
+{
+    if(nop==1)
+    {
+        glColor3f(0,1,0);
+        glBegin(GL_POINTS);
+            glVertex2f(co[0]->x,co[0]->y);
+        glEnd();
+    }
+    else if(nop==2)
+    {
+        glColor3f(0,1,0);
+        glBegin(GL_LINES);
+            glVertex2f(co[0]->x,co[0]->y);
+            glVertex2f(co[1]->x,co[1]->y);
+        glEnd();
+    }
+    else
+    {
+        glColor3f(0,1,0);
+        glBegin(GL_LINE_LOOP);
+            for(int i=0;i<nop;i++)
+                glVertex2f(co[i]->x,co[i]->y);
+        glEnd();
+    }
+    glFlush();
+}
+
+void get_object_data()
+{
+    int nop,p1,p2,i;
+    string line,word;
+    vector<string> row;
+    stringstream geek;
+    coordinate **co;
+
+    fstream fio;
+    fio.open("D:/packages/3rd sem/spatial_indexing/dataset.csv",ios::in);
+    getline(fio,line);
+
+    while(fio)
+    {
+        row.clear();
+        getline(fio,line);
+        stringstream s(line);
+        if(line=="")
+            break;
+
+        while(getline(s, word, ','))
+        {
+            row.push_back(word);
+        }
+
+        geek << row[2];
+        geek >> nop;
+        geek.clear();
+
+        co=new coordinate*[nop];
+
+        for(i=3;i<3+2*(nop);i+=2)
+        {
+            geek << row[i];
+            geek >> p1;
+            geek.clear();
+
+            geek << row[i+1];
+            geek >> p2;
+            geek.clear();
+
+            co[i-3]=new coordinate(p1,p2);
+        }
+        draw_polygon(nop,co);
+    }
+    fio.close();
+}
 
 void myInit()
 {
@@ -37,12 +120,12 @@ void myDisplay()
         {
             for(i=0;i<temp->no_leafs;i++)
             {
-                glColor3f(0,1,0);
-                glBegin(GL_POINTS);
+                glColor3f(0,0,1);
+                glBegin(GL_LINE_LOOP);
                     glVertex2f(temp->leafs[i]->box->bottom->x,temp->leafs[i]->box->bottom->y);
-                    //glVertex2f(100+temp->leafs[i]->box->top->x,100+temp->leafs[i]->box->bottom->y);
-                    //glVertex2f(100+temp->leafs[i]->box->top->x,100+temp->leafs[i]->box->top->y);
-                    //glVertex2f(100+temp->leafs[i]->box->bottom->x,100+temp->leafs[i]->box->top->y);
+                    glVertex2f(temp->leafs[i]->box->top->x,temp->leafs[i]->box->bottom->y);
+                    glVertex2f(temp->leafs[i]->box->top->x,temp->leafs[i]->box->top->y);
+                    glVertex2f(temp->leafs[i]->box->bottom->x,temp->leafs[i]->box->top->y);
                 glEnd();
             }
         }
@@ -60,6 +143,7 @@ void myDisplay()
         glVertex2f(mainroot->box->top->x,mainroot->box->top->y);
         glVertex2f(mainroot->box->bottom->x,mainroot->box->top->y);
     glEnd();
+    get_object_data();
     glFlush();
 }
 
@@ -104,7 +188,7 @@ void resize(int width, int height)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-    gluPerspective(80.0, width / height, 1.0, 600.0);
+    gluPerspective(80.0, width / height, 1.0, 1000.0);
 
 	glTranslatef(-250.0, -250.0, -300.0);
 
