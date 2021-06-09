@@ -181,6 +181,7 @@ int* pick_next(mbb **tot,mbb *box1,mbb *box2,bool *presence,int no1,int no2)
 
             d1=box1->area_enlargement(tot[i]);
             d2=box2->area_enlargement(tot[i]);
+
             if(d1<d2)
                 result[0]=1;
             else if(d2<d1)
@@ -866,88 +867,5 @@ class rtree
     }
 
 };
-node *mainroot=NULL;
-
-void myInit()
-{
-    glClearColor(1.0,1.0,1.0,0.0);
-    glColor3f(0.0,0.0,0.0);
-    glPointSize(3);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(0.0,640.0,0.0,500.0);
-}
-
-void keyboard(unsigned char key, int x, int y)
-{
-
-}
-
-void myDisplay()
-{
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    int i;
-    node* temp;
-    queue<node*> Q;
-    Q.push(mainroot);
-
-    while(!Q.empty())
-    {
-        temp=Q.front();
-        glColor3f(0,0,1);
-        glBegin(GL_LINE_LOOP);
-            glVertex2f(100+temp->box->bottom->x,100+temp->box->bottom->y);
-            glVertex2f(100+temp->box->top->x,100+temp->box->bottom->y);
-            glVertex2f(100+temp->box->top->x,100+temp->box->top->y);
-            glVertex2f(100+temp->box->bottom->x,100+temp->box->top->y);
-        glEnd();
-        cout<<"Temp coordinates are\n";
-        temp->box->print_mbb();
-        Q.pop();
-        if(temp->isleaf==true)
-        {
-            for(i=0;i<temp->no_leafs;i++)
-            {
-                glColor3f(0,1,0);
-                glBegin(GL_POINTS);
-                    glVertex2f(100+temp->leafs[i]->box->bottom->x,100+temp->leafs[i]->box->bottom->y);
-                    //glVertex2f(100+temp->leafs[i]->box->top->x,100+temp->leafs[i]->box->bottom->y);
-                    //glVertex2f(100+temp->leafs[i]->box->top->x,100+temp->leafs[i]->box->top->y);
-                    //glVertex2f(100+temp->leafs[i]->box->bottom->x,100+temp->leafs[i]->box->top->y);
-                glEnd();
-            }
-        }
-        else
-        {
-            for(i=0;i<temp->no_childs;i++)
-                Q.push(temp->child[i]);
-        }
-    }
-
-    glColor3f(1,0,0);
-    glBegin(GL_LINE_LOOP);
-        glVertex2f(100+mainroot->box->bottom->x,100+mainroot->box->bottom->y);
-        glVertex2f(100+mainroot->box->top->x,100+mainroot->box->bottom->y);
-        glVertex2f(100+mainroot->box->top->x,100+mainroot->box->top->y);
-        glVertex2f(100+mainroot->box->bottom->x,100+mainroot->box->top->y);
-    glEnd();
-    glFlush();
-}
-
-void Visualize_tree(node *root,int argc,char **argv)
-{
-    mainroot=root;
-
-    glutInit(&argc,argv);
-    glutInitDisplayMode(GLUT_SINGLE|GLUT_RGB);
-    glutInitWindowSize(640,500);
-    glutInitWindowPosition(100,150);
-    glutCreateWindow("Visualization of Rtree");
-    glutKeyboardFunc(keyboard);
-    glutDisplayFunc(myDisplay);
-    myInit();
-    glutMainLoop();
-}
 
 #endif // RTREE_H_INCLUDED
