@@ -6,15 +6,16 @@
 - [Motivation](#motivation)
 - [Deep into R Trees](#deep-into-r-trees)
 - [Technical Aspect](#technical-aspect)
-- Features
-- Installation
-- Algorithm
-- Runtime Complexities
-- Directory Tree
-- Technology and Tools
-- To Do
+- [Installation](#installation)
+- [Run](#run)
+- [Runtime Complexities](#runtime-complexities)
+- [Directory Tree](#directorytree)
+- [Technology and Tools](#technology-and-tools)
+- [To Do](#to-do)
 - [Reference](#references)
-- Contact
+- [Contact](#contact)
+## Demo
+## Screen Shots
 ## Overview
 A spatial database is a database that is optimized for storing and querying data that represents objects defined in a geometric space. Most spatial databases allow the representation of simple geometric objects such as points, lines and polygons. Such databases are finding increasing use in applications in environmental monitoring, space, urban planning, resource management, geographic information systems (GIS).
 
@@ -62,6 +63,87 @@ The queries include
 Deleting a object from the R trees and finally visualising the R trees using OpenGL.
 
 The project was divided into 3 files rtrees.h which holds the code for the Tree, opengl.h which holds the code of OpenGl for visualisation and main.cpp which is used to integrate the both.
+## Installation
+The code was written using C++. If you don't have IDE that supports C++ please install one. After that please download OpenGL and follow the instructions to install using this [link](https://users.cs.jmu.edu/bernstdh/web/common/help/cpp_mingw-glut-setup.php). Finally Clone the repository and move to next sub heading.
+## Run
+First Lets start with the dataset which consist of keyid, type, no of points and, the corresponding coordinates. With a total of rows each row denotes a object.
+
+![image](https://user-images.githubusercontent.com/49152921/121520720-debabe80-ca10-11eb-8fbc-c7394013a34a.png)
+
+Dont Worry about the header files they are just few lines of codes to perform the following tasks.
+### Creating a tree
+First Create a tree object of class rtree. Done by 
+```
+rtree tree;
+```
+### Insertion
+Now we are inserting an element(object) into the R trees. The Element class consist of a keyid and the mbr enclosing the object. Since the object may be of any size we are not storing the details of the object.
+```
+//element constructor takes the parameters int and mbb*. Here b is a pointer to the mbb of the object.
+element *e=new element(key,b);    
+//takes the parameters element*.
+tree.insert(e);     
+```
+The insertion algorithm uses the Guttman's Quadratic Split Algorithm for splitting the node when an overflow occurs.
+### Printing the Node Details
+Every node has a function print_node which used to return the particular node details. For ex:
+```
+tree.root->print_node();
+```
+### Searching for a Object
+To check whether a object is present in the tree or not. Use
+```
+// Search function takes the parameter element*. Here e is the element pointer which points to the query element.
+tree.search(e);
+```
+### Finding the object wrt the point
+To find the object which contains the query point use the following code
+```
+// findobj_wrt_point takes a parameter coordinate*. Where the coordinate object consist of x and y coordinate values.
+tree.findobj_wrt_point(q);
+```
+### Range Search
+To find all the object that lies or overlaps in the query box. Use the following code
+```
+//range_search function takes the input mbb*. Where mbb object consist of query boxes bottomleftx, bottomlefty, toprightx and, toprighty. 
+//here b is a pointer points to a mbb object.
+tree.range_search(b);
+```
+### KNN Search
+To find all the k objects given a query point. Use the following code
+```
+//knn function takes int,coordinate* as the input.
+//here k is the K no of neighbours and query is a pointer to the coordinate object.
+tree.knn(k,query);
+```
+### Deletion
+For deleting a object from the R tree. Use the following code
+```
+//deletion function takes the parameter element*.
+//here e is the pointer points to the object which is to be deleted.
+tree.deletion(e);
+```
+To understand much detail about how each of these algorithms work internally refer the references I shared.
+### Visualisation
+To visualise the R tree using the opengl. Call this function
+```
+//Visualize_tree takes the parameter node*,int,char**
+//here tree.root is the root of the rtree, argc and argv are the arguments of the main function.
+Visualize_tree(tree.root,argc,argv);
+```
+Also keep in mind to call this visualize function at the last because it is called it never returns.
+## Runtime Complexities
+Search: average complexity is ![image](https://user-images.githubusercontent.com/49152921/121526043-a5854d00-ca16-11eb-8886-4c27e4c68491.png)
+
+Insert: average complexity is ![image](https://user-images.githubusercontent.com/49152921/121526074-addd8800-ca16-11eb-9d57-abb20abf17e9.png)
+## Directory Tree
+## Technology and Tools
+- C++
+- OpenGL
+## To Do
+- Fixing some bugs(if found).
+- Giving more features while visualising the tree.
+- Adding more complex queries.
 ## References
 - https://en.wikipedia.org/wiki/R-tree
 - http://www.cs.umd.edu/~hjs/pubs/kim.pdf
@@ -75,3 +157,5 @@ The project was divided into 3 files rtrees.h which holds the code for the Tree,
 - http://www09.sigmod.org/disc/disc99/disc/record/issues/9809/cheung.pdf
 - http://postgis.refractions.net/support/nearestneighbor.pdf
 - https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/
+## Contact
+If you found any bug or like to raise a question feel free to contact me through [LinkedIn](https://www.linkedin.com/in/kirushikesh-d-b-10a75a169/). If you feel this project helped you and like to encourage me for more kinds of stuff like this please endorse my skills in my [LinkedIn](https://www.linkedin.com/in/kirushikesh-d-b-10a75a169/) thanks in advance!!!.
