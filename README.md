@@ -1,4 +1,19 @@
-# Spatial_indexing
+# Spatial_indexing Using R Trees
+## Table of Content
+- Demo
+- Screen Shots
+- Overview
+- Motivation
+- Technical Aspect
+- Features
+- Installation
+- Working of Rtrees
+- Runtime Complexities
+- Directory Tree
+- Technology and Tools
+- To Do
+- Reference(#references)
+- Contact
 ## References
 - https://en.wikipedia.org/wiki/R-tree
 - http://www.cs.umd.edu/~hjs/pubs/kim.pdf
