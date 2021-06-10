@@ -9,7 +9,7 @@
 - [Installation](#installation)
 - [Run](#run)
 - [Runtime Complexities](#runtime-complexities)
-- [Directory Tree](#directorytree)
+- [Directory Tree](#directory-tree)
 - [Technology and Tools](#technology-and-tools)
 - [To Do](#to-do)
 - [Reference](#references)
@@ -131,12 +131,15 @@ To visualise the R tree using the opengl. Call this function
 //here tree.root is the root of the rtree, argc and argv are the arguments of the main function.
 Visualize_tree(tree.root,argc,argv);
 ```
+The keys used for visualisation is UP, DOWN, LEFT, Down Arrows for moving the objects. And the Key W and S for Zoom in and out.
 Also keep in mind to call this visualize function at the last because it is called it never returns.
 ## Runtime Complexities
 Search: average complexity is ![image](https://user-images.githubusercontent.com/49152921/121526043-a5854d00-ca16-11eb-8886-4c27e4c68491.png)
 
 Insert: average complexity is ![image](https://user-images.githubusercontent.com/49152921/121526074-addd8800-ca16-11eb-9d57-abb20abf17e9.png)
 ## Directory Tree
+![image](https://user-images.githubusercontent.com/49152921/121527695-4de7e100-ca18-11eb-8002-e21fa8c443ec.png)
+
 ## Technology and Tools
 - C++
 - OpenGL
