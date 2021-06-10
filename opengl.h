@@ -5,6 +5,7 @@
 #include <GL/glut.h>
 #include<queue>
 #include<fstream>
+#include<math.h>
 #include<vector>
 #include <sstream>
 
@@ -38,9 +39,23 @@ void draw_polygon(int nop,coordinate **co)
     glFlush();
 }
 
+void draw_circle(coordinate *co,int radius)
+{
+    glColor3f(0,1,0);
+    float angle;
+    glBegin(GL_LINE_LOOP);
+        for (int i = 0; i < 100; i++)
+        {
+            angle = i*2*(3.14/100);
+            glVertex2f(co->x+(cos(angle)*radius),co->y+(sin(angle)*radius));
+        }
+    glEnd();
+    glFlush();
+}
+
 void get_object_data()
 {
-    int nop,p1,p2,i;
+    int nop,p1,p2,i,radius;
     string line,word;
     vector<string> row;
     stringstream geek;
@@ -79,9 +94,21 @@ void get_object_data()
             geek >> p2;
             geek.clear();
 
-            co[i-3]=new coordinate(p1,p2);
+            co[(i-3)/2]=new coordinate(p1,p2);
         }
-        draw_polygon(nop,co);
+
+        if(row[1].compare("circle")==0)
+        {
+            geek<<row[i];
+            geek >> radius;
+            geek.clear();
+
+            draw_circle(co[0],radius);
+        }
+        else
+        {
+            draw_polygon(nop,co);
+        }
     }
     fio.close();
 }
@@ -108,6 +135,7 @@ void myDisplay()
     while(!Q.empty())
     {
         temp=Q.front();
+
         glColor3f(0,0,1);
         glBegin(GL_LINE_LOOP);
             glVertex2f(temp->box->bottom->x,temp->box->bottom->y);
@@ -116,6 +144,7 @@ void myDisplay()
             glVertex2f(temp->box->bottom->x,temp->box->top->y);
         glEnd();
         Q.pop();
+
         if(temp->isleaf==true)
         {
             for(i=0;i<temp->no_leafs;i++)
@@ -143,8 +172,9 @@ void myDisplay()
         glVertex2f(mainroot->box->top->x,mainroot->box->top->y);
         glVertex2f(mainroot->box->bottom->x,mainroot->box->top->y);
     glEnd();
-    get_object_data();
     glFlush();
+    get_object_data();
+
 }
 
 void keyboard(unsigned char key, int x, int y)
@@ -152,10 +182,10 @@ void keyboard(unsigned char key, int x, int y)
     switch (key)
 	{
 	    case 'w':
-            glTranslatef(0.0, 0.0, 5.0);
+            glTranslatef(0.0, 0.0, 3.0);
             break;
         case 's':
-            glTranslatef(0.0, 0.0, -5.0);
+            glTranslatef(0.0, 0.0, -3.0);
             break;
 	}
 	glutPostRedisplay();
@@ -188,19 +218,11 @@ void resize(int width, int height)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-    gluPerspective(80.0, width / height, 1.0, 1000.0);
+    gluPerspective(60.0, (GLfloat)width / (GLfloat)height, 0.1, 1000.0);
 
 	glTranslatef(-250.0, -250.0, -300.0);
 
 	glMatrixMode(GL_MODELVIEW);
-}
-
-void mouse(int button, int state, int x, int y)
-{
-    if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
-    {
-        cout<<"Left is clicked\n";
-    }
 }
 
 void Visualize_tree(node *root,int argc,char **argv)
@@ -214,7 +236,6 @@ void Visualize_tree(node *root,int argc,char **argv)
     glutCreateWindow("Visualization of Rtree");
     glutKeyboardFunc(keyboard);
     glutSpecialFunc(SpecialInput);
-    glutMouseFunc(mouse);
     glutDisplayFunc(myDisplay);
     myInit();
     glutReshapeFunc(resize);

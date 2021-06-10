@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1623251195 source:d:\packages\3rd sem\spatial_indexing\main.cpp
+1623303112 source:d:\packages\3rd sem\spatial_indexing\main.cpp
 	<iostream>
 	<fstream>
 	<vector>
@@ -7,11 +7,12 @@
 	"rtree.h"
 	"opengl.h"
 
-1623251328 d:\packages\3rd sem\spatial_indexing\opengl.h
+1623304501 d:\packages\3rd sem\spatial_indexing\opengl.h
 	<windows.h>
 	<GL/glut.h>
 	<queue>
 	<fstream>
+	<math.h>
 	<vector>
 	<sstream>
 

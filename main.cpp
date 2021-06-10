@@ -7,7 +7,7 @@
 
 using namespace std;
 
-mbb* convert_to_box(int nop,coordinate **co)
+mbb* poly_convert_to_box(int nop,coordinate **co)
 {
     int minx=9999,miny=9999,maxx=-1,maxy=-1,i;
     for(i=0;i<nop;i++)
@@ -25,9 +25,20 @@ mbb* convert_to_box(int nop,coordinate **co)
     return temp;
 }
 
+mbb* circ_convert_to_box(coordinate *co,int radius)
+{
+    int minx,miny,maxx,maxy;
+    minx=co->x-radius;
+    miny=co->y-radius;
+    maxx=co->x+radius;
+    maxy=co->y+radius;
+    mbb* temp=new mbb(minx,miny,maxx,maxy);
+    return temp;
+}
+
 int main(int argc,char *argv[])
 {
-    int key,nop,p1,p2,i;
+    int key,nop,p1,p2,i,radius;
     string line,word;
     vector<string> row;
     stringstream geek;
@@ -76,12 +87,24 @@ int main(int argc,char *argv[])
             geek >> p2;
             geek.clear();
 
-            co[i-3]=new coordinate(p1,p2);
+            co[(i-3)/2]=new coordinate(p1,p2);
         }
 
-        b=convert_to_box(nop,co);
+        if(row[1].compare("circle")==0)
+        {
+            geek<<row[i];
+            geek>>radius;
+            geek.clear();
+
+            b=circ_convert_to_box(co[0],radius);
+        }
+        else
+        {
+            b=poly_convert_to_box(nop,co);
+        }
         e=new element(key,b);
         tree.insert(e);
+
     }
     tree.root->print_node();
     Visualize_tree(tree.root,argc,argv);

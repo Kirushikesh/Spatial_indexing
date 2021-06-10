@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <CodeBlocks_layout_file>
 	<ActiveTarget name="Debug" />
-	<File name="main.cpp" open="1" top="1" tabpos="1">
-		<Cursor position="1158" topLine="0" />
+	<File name="main.cpp" open="1" top="0" tabpos="1">
+		<Cursor position="1114" topLine="41" />
 	</File>
-	<File name="opengl.h" open="1" top="0" tabpos="3">
-		<Cursor position="0" topLine="0" />
+	<File name="opengl.h" open="1" top="1" tabpos="2">
+		<Cursor position="3121" topLine="144" />
 	</File>
-	<File name="rtree.h" open="1" top="0" tabpos="2">
-		<Cursor position="0" topLine="0" />
+	<File name="rtree.h" open="1" top="0" tabpos="3">
+		<Cursor position="143" topLine="234" />
 	</File>
 </CodeBlocks_layout_file>
