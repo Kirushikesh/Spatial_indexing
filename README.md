@@ -15,7 +15,13 @@
 - [Reference](#references)
 - [Contact](#contact)
 ## Demo
+![Animation2](https://user-images.githubusercontent.com/49152921/121528965-93f17480-ca19-11eb-8976-60bb9da3708a.gif)
+
 ## Screen Shots
+![image](https://user-images.githubusercontent.com/49152921/121531204-d3b95b80-ca1b-11eb-92ce-15388351401b.png)
+
+![image](https://user-images.githubusercontent.com/49152921/121532473-fe57e400-ca1c-11eb-9eb3-1c8fcb5b307e.png)
+
 ## Overview
 A spatial database is a database that is optimized for storing and querying data that represents objects defined in a geometric space. Most spatial databases allow the representation of simple geometric objects such as points, lines and polygons. Such databases are finding increasing use in applications in environmental monitoring, space, urban planning, resource management, geographic information systems (GIS).
 
@@ -132,6 +138,10 @@ To visualise the R tree using the opengl. Call this function
 Visualize_tree(tree.root,argc,argv);
 ```
 The keys used for visualisation is UP, DOWN, LEFT, Down Arrows for moving the objects. And the Key W and S for Zoom in and out.
+
+![image](https://user-images.githubusercontent.com/49152921/121529900-7cff5200-ca1a-11eb-8241-4c9771074a40.png)
+
+The Red Box in the image is the root bounding box, and the blue boxes are the other non leafs bounding boxes and green denotes the objects.
 Also keep in mind to call this visualize function at the last because it is called it never returns.
 ## Runtime Complexities
 Search: average complexity is ![image](https://user-images.githubusercontent.com/49152921/121526043-a5854d00-ca16-11eb-8886-4c27e4c68491.png)
