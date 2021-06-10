@@ -1,5 +1,5 @@
 # Spatial_indexing
-##References
+## References
 - https://en.wikipedia.org/wiki/R-tree
 - http://www.cs.umd.edu/~hjs/pubs/kim.pdf
 - https://en.wikipedia.org/wiki/Spatial_database
